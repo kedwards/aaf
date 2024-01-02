@@ -1,0 +1,34 @@
+---
+- name: Set 'stack_name' variable
+  ansible.builtin.set_fact:
+    stack_name: "{{ stack_prefix }}-network"
+
+- name: Get facts about the cfn network stack
+  amazon.aws.cloudformation_info:
+    stack_name: "{{ stack_name }}"
+  register: network_stack_facts
+
+- name: Set network facts
+  ansible.builtin.set_fact:
+    network_outputs: "{{ network_stack_facts.cloudformation[stack_name].stack_outputs }}"
+
+- name: List 'stack_outputs' from cached facts
+  ansible.builtin.debug:
+    msg: "{{ network_outputs }}"
+
+- name: Set 'stack_name' variable
+  ansible.builtin.set_fact:
+    stack_name: "{{ stack_prefix }}-compute"
+
+- name: Get facts about the cfn compute stack
+  amazon.aws.cloudformation_info:
+    stack_name: "{{ stack_name }}"
+  register: compute_stack_facts
+
+- name: Set compute facts
+  ansible.builtin.set_fact:
+    compute_outputs: "{{ compute_stack_facts.cloudformation[stack_name].stack_outputs }}"
+
+- name: List 'stack_outputs' from cached facts
+  ansible.builtin.debug:
+    msg: "{{ compute_outputs }}"

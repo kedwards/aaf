@@ -1,0 +1,51 @@
+---
+- name: Set stack name
+  ansible.builtin.set_fact:
+    endpoints_stack_name: "{{ stack_prefix }}-endpoints"
+    network_stack_name: "{{ stack_prefix }}-network"
+
+- name: Get facts about network stack
+  amazon.aws.cloudformation_info:
+    stack_name: "{{ item }}"
+  loop:
+    - "{{ network_stack_name }}"
+    - "{{ endpoints_stack_name }}"
+  register: stack_facts
+
+- name: Set stack facts
+  ansible.builtin.set_fact:
+    network_facts: "{{ stack_facts.results[0].cloudformation[network_stack_name].stack_outputs }}"
+    endpoints_facts: "{{ stack_facts.results[1].cloudformation[endpoints_stack_name].stack_outputs }}"
+
+- name: Set key_name fact
+  ansible.builtin.set_fact:
+    key_name: "{{ private_key | basename | split('.') | first }}"
+
+- name: Create compute stack
+  amazon.aws.cloudformation:
+    stack_name: "{{ stack_prefix }}-compute"
+    state: present
+    region: "{{ aws_region }}"
+    disable_rollback: false
+    template_url: "{{ lookup('env', 'TEMPLATE_URL') }}"
+    template_parameters:
+      StackPrefix: "{{ stack_prefix }}"
+      DesiredCapacity: "{{ lookup('env', 'DESIRED_CAPACITY') }}"
+      DnsName: "{{ lookup('env', 'DNS_NAME') }}"
+      Ec2InstanceType: "{{ lookup('env', 'INSTANCE_TYPE') }}"
+      ImageId: "{{ image_id }}"
+      KeyName: "{{ lookup('env', 'KEY_NAME') }}"
+      LoadBalancerTargetDrain: "{{ lookup('env', 'LOAD_BALANCER_TARGET_DRAIN') }}"
+      MaxSize: "{{ lookup('env', 'MAX_SIZE') }}"
+      MinSize: "{{ lookup('env', 'MIN_SIZE') }}"
+      VolumeSize: "{{ lookup('env', 'VOLUME_SIZE') }}"
+      VpcId: "{{ network_facts.VpcId }}"
+      VpcEndpointClientsSecurityGroupId: "{{ endpoints_facts.VpcEndpointClientsSecurityGroupId }}"
+      VpcEndpointSecurityGroupId: "{{ endpoints_facts.VpcEndpointSecurityGroupId }}"
+      PrivateSubnets: "{{ network_facts.PrivateSubnets }}"
+      PublicSubnets: "{{ network_facts.PublicSubnets }}"
+      TagName: "{{ lookup('env', 'TAG_NAME') }}"
+      TagGroup: "{{ lookup('env', 'TAG_GROUP') }}"
+      TagEnv: "{{ lookup('env', 'TAG_ENVIRONMENT') }}"
+    tags:
+      Stack: "{{ stack_prefix }}-compute"

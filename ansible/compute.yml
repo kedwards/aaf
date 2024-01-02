@@ -1,0 +1,6 @@
+---
+- name: Compute
+  ansible.builtin.import_playbook: playbooks/20_compute.yml
+
+# - name: Lambda functions
+#   ansible.builtin.import_playbook: playbooks/50_lambdas.yml

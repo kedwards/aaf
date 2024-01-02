@@ -1,0 +1,35 @@
+---
+- name: Test web server via ALB URL
+  hosts: localhost
+  gather_facts: false
+  pre_tasks:
+    - name: Load variables
+      ansible.builtin.include_vars: ../../../../inventory/group_vars/all.yml
+  roles:
+    - ../../setup
+    - ../../integration_tests
+  vars:
+    public_url: "{{ compute_outputs.PublicUrl }}"
+  tasks:
+    - name: Check if homepage is accessible via the public DNS address
+      ansible.builtin.uri:
+        url: "{{ public_url }}"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 2
+      delay: 5
+
+    - name: Check if homepage contains 'Ansible and Friend on AWS!' string
+      ansible.builtin.uri:
+        url: "{{ public_url }}"
+        return_content: true
+      register: response
+      failed_when: "'Ansible and Friend on AWS!' not in response.content"
+
+    - name: Check if /server-status page contains 'Apache Server Status' string
+      ansible.builtin.uri:
+        url: "{{ public_url }}/server-status"
+        return_content: true
+      register: response
+      failed_when: "'Apache Server Status' not in response.content"

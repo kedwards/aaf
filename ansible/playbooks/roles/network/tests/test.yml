@@ -1,0 +1,21 @@
+---
+- name: Test network Ansible role
+  gather_facts: false
+  hosts: localhost
+  vars:
+    stack_name: "{{ stack_prefix }}-network"
+  pre_tasks:
+    - name: Get facts about the network stack
+      amazon.aws.cloudformation_info:
+        stack_name: "{{ stack_name }}"
+      register: stack_facts
+
+    - name: List 'stack_outputs' from cached facts
+      ansible.builtin.debug:
+        msg: "{{ stack_facts['cloudformation'][stack_name].stack_outputs }}"
+
+  tasks:
+    - name: Check if the AWS Region of the VPC is {{ lookup('env', 'AWS_REGION') }}
+      ansible.builtin.debug:
+        msg: "AWS Region of the VPC is {{ lookup('env', 'AWS_REGION') }}"
+      failed_when: stack_facts.cloudformation[stack_name].stack_outputs['VpcRegion'] != lookup('env', 'AWS_REGION')

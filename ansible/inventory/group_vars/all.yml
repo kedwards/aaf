@@ -1,0 +1,46 @@
+---
+# these are required an can be set here
+# or via ansible environment variables on cli
+prefix: qp
+project: aaf
+
+# cloudformation stack options
+create_changeset: false
+stack_prefix: "{{ prefix }}-cf"
+
+# this is the projects s3 bucket name
+# varying resource data will be store here
+# in different folders, in larger projects
+# it may be nescessary to use multiple buckets
+s3_bucket_name: "{{ stack_prefix }}-{{ project }}-{{ aws_profile }}-{{ aws_region }}"
+s3_object_days_before_expiration: 30
+
+# source code repository
+repository_name: "{{ stack_prefix }}-{{ project }}"
+
+# path to the system manager parameters
+ssm_parameter_path: "{{ stack_prefix }}/{{ project }}"
+
+# If you plan on using keys and not ssm
+private_key: "~/.ssh/{{ stack_prefix }}-{{ project }}.pem"
+ssh_location: "0.0.0.0/0"
+
+# network (vpc) information
+vpc_cidr: 10.0.0.0/16
+private_subnet_1_cidr: 10.0.1.0/24
+private_subnet_2_cidr: 10.0.3.0/24
+public_subnet_1_cidr: 10.0.2.0/24
+public_subnet_2_cidr: 10.0.4.0/24
+
+# EC2 instance information
+desired_capacity: 1
+dns_name: "ansible-aws.rch.{{ aws_profile }}"
+image_id: /ec2/ami/engine/ami_id
+instance_type: t3.medium
+load_balancer_target_drain: 60
+max_size: 2
+min_size: 1
+tag_env: "{{ aws_profile }}-{{ project }}"
+tag_group: "{{ stack_prefix }}_webservers"
+tag_name: "{{ stack_prefix }}_compute"
+volume_size: 150

@@ -1,0 +1,358 @@
+Description: Compute resources
+
+Parameters:
+  DesiredCapacity:
+    Description: The number of EC2 instances to launch
+    Type: Number
+
+  DnsName:
+    Description: The DNS name of the resource
+    Type: String
+
+  Ec2InstanceType:
+    Description: The type of EC2 instance to launch
+    Type: String
+
+  LoadBalancerTargetDrain:
+    Description: The number of seconds to wait before deregistering a target
+    Type: Number
+
+  MaxSize:
+    Description: The maximum number of EC2 instances to launch
+    Type: Number
+
+  MinSize:
+    Description: The minimum number of EC2 instances to launch
+    Type: Number
+
+  VolumeSize:
+    Description: The size of the EBS volume to attach to the EC2 instance
+    Type: String
+
+  KeyName:
+    Description: The name of the SSH Key
+    Type: String
+
+  VpcEndpointClientsSecurityGroupId:
+    Description: The security group for the VPC endpoint
+    Type: AWS::EC2::SecurityGroup::Id
+
+  VpcEndpointSecurityGroupId:
+    Description: The security group for the VPC endpoint
+    Type: AWS::EC2::SecurityGroup::Id
+
+  VpcId:
+    Description: The vpcId to place resources
+    Type: AWS::EC2::VPC::Id
+
+  ImageId:
+    Description: AMI ID for Servers
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64
+
+  PrivateSubnets:
+    Description: The list of Private SubnetIds in your Virtual Private Cloud (VPC)
+    Type: List<AWS::EC2::Subnet::Id>
+
+  PublicSubnets:
+    Description: The list of Public SubnetIds in your Virtual Private Cloud (VPC)
+    Type: List<AWS::EC2::Subnet::Id>
+
+  StackPrefix:
+    Description: The prefix to use for all resources
+    Type: String
+
+  TagName:
+    Description: '''Name'' tag value'
+    Type: String
+
+  TagGroup:
+    Description: '''Group'' tag value'
+    Type: String
+
+  TagEnv:
+    Description: '''Environment'' tag value'
+    Type: String
+
+Resources:
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Path: /
+      RoleName: instance-host-role
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Ref InstanceRole
+      Path: /
+      Roles:
+        - !Ref InstanceRole
+
+  VpcEndpointSecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      Description: Allow access to VPC endpoints
+      FromPort: 443
+      IpProtocol: tcp
+      DestinationSecurityGroupId: !Ref VpcEndpointSecurityGroupId
+      GroupId: !Ref VpcEndpointClientsSecurityGroupId
+      ToPort: 443
+
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ELB Public http(s) Access
+      VpcId: !Ref VpcId
+
+  AlbHttpSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      CidrIp: 0.0.0.0/0
+      Description: Allow All to HTTP
+      FromPort: 80
+      GroupId: !GetAtt AlbSecurityGroup.GroupId
+      IpProtocol: tcp
+      ToPort: 80
+
+  AlbHttpsSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      CidrIp: 0.0.0.0/0
+      Description: Allow All to HTTPS
+      FromPort: 443
+      GroupId: !GetAtt AlbSecurityGroup.GroupId
+      IpProtocol: tcp
+      ToPort: 443
+
+  AlbSshSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      CidrIp: 0.0.0.0/0
+      Description: Allow All to SSH
+      FromPort: 22
+      GroupId: !GetAtt AlbSecurityGroup.GroupId
+      IpProtocol: tcp
+      ToPort: 22
+
+  AutoScalingGroup:
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT30M
+        Count: !Ref DesiredCapacity
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        SuspendProcesses:
+          - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
+        MinSuccessfulInstancesPercent: 100
+        WaitOnResourceSignals: true
+        PauseTime: PT30M
+      AutoScalingScheduledAction:
+        IgnoreUnmodifiedGroupSizeProperties: true
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          setupAndRun:
+            - configEnvironment
+            - installHttpd
+            - configureWeb
+        configEnvironment:
+          commands:
+            01_set_hostname:
+              command: hostnamectl set-hostname webserver
+        installHttpd:
+          commands:
+            01_update_dnf:
+              command: |
+                dnf -y update
+            02_install_httpd:
+              command: |
+                dnf -y install httpd
+            03_start_httpd:
+              command: |
+                systemctl start httpd
+                systemctl enable httpd
+        configureWeb:
+          commands:
+            01_configure:
+              command: |
+                echo "<h1>Ansible AWS And Friends</h1>" > /var/www/html/index.html
+    Properties:
+      MetricsCollection:
+        - Granularity: 1Minute
+      MaxSize: !Ref MaxSize
+      MinSize: !Ref MinSize
+      Cooldown: "120"
+      DesiredCapacity: !Ref DesiredCapacity
+      HealthCheckGracePeriod: 300
+      HealthCheckType: ELB
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      Tags:
+        - Key: Name
+          Value: !Ref TagName
+          PropagateAtLaunch: true
+        - Key: Group
+          Value: !Ref TagGroup
+          PropagateAtLaunch: true
+        - Key: Environment
+          Value: !Ref TagEnv
+          PropagateAtLaunch: true
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      VPCZoneIdentifier: !Ref PrivateSubnets
+
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Certificates:
+        - CertificateArn: !ImportValue Reach-PublicHostedCertificateArn
+      Port: 443
+      Protocol: HTTPS
+      SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - RedirectConfig:
+            Protocol: HTTPS
+            Port: "443"
+            Host: '#{host}'
+            Path: /#{path}
+            Query: '#{query}'
+            StatusCode: HTTP_301
+          Type: redirect
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  HttpListenerRule:
+    Type: "AWS::ElasticLoadBalancingV2::ListenerRule"
+    Properties:
+      Priority: "1"
+      ListenerArn: !Ref HttpListener
+      Conditions: 
+        - Field: "source-ip"
+          SourceIpConfig:
+            Values: 
+              - 10.0.0.0/16
+      Actions: 
+        - Type: "forward"
+          TargetGroupArn: !Ref TargetGroup
+          Order: 1
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      Name: !Sub "${StackPrefix}-webserver"
+      Scheme: internet-facing
+      SecurityGroups:
+        - !GetAtt AlbSecurityGroup.GroupId
+        - !Ref VpcEndpointClientsSecurityGroupId
+      Subnets: !Ref PublicSubnets
+      Type: application
+
+  RecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      AliasTarget:
+        DNSName: !GetAtt LoadBalancer.DNSName
+        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+      Comment: DNS Entry
+      HostedZoneId: !ImportValue Reach-PublicHostedZoneId
+      Name: !Ref DnsName
+      Type: A
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: /index.html
+      Port: 80
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: !Ref LoadBalancerTargetDrain
+      TargetType: instance
+      VpcId: !Ref VpcId
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: webservers
+      LaunchTemplateData:
+        IamInstanceProfile:
+          Arn: !GetAtt InstanceProfile.Arn
+        ImageId: !Ref ImageId
+        InstanceType: !Ref Ec2InstanceType
+        KeyName: !Ref KeyName
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: !Ref VolumeSize
+              VolumeType: gp3
+        DisableApiStop: false
+        DisableApiTermination: false
+        Monitoring:
+          Enabled: true
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: false
+            Groups:
+              - !GetAtt AlbSecurityGroup.GroupId
+              - !Ref VpcEndpointClientsSecurityGroupId
+            DeleteOnTermination: true
+        UserData: !Base64
+          Fn::Sub: |
+            #!/bin/bash -xe
+            /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup --configsets setupAndRun
+            /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Owner
+                Value: DevOps Team
+      TagSpecifications:
+        - ResourceType: launch-template
+          Tags:
+            - Key: Name
+              Value: !Ref TagName
+
+Outputs:
+  LoadBalancerDns:
+    Description: Loadbalancer url of the website
+    Value: !Join
+      - ""
+      - - http://
+        - !GetAtt LoadBalancer.DNSName
+
+  PublicUrl:
+    Description: Public url of the website
+    Value: !Join
+      - ""
+      - - https://
+        - !Ref DnsName
+

@@ -1,0 +1,29 @@
+---
+- name: Set default ssm paramaters
+  ansible.builtin.set_fact:
+    default_ssm_parameters:
+    - { type: "SecureString", name: "/{{ ssm_parameter_path }}/ansible_private_key", description: "Ansible private key for EC2 instances", value: "{{ lookup('file', private_key) }}" }
+    - { type: "String", name: "/{{ ssm_parameter_path }}/ssh_location", description: "IP Address Range from which SSH is allowed", value: "{{ ssh_location }}" }
+    - { type: "String", name: "/{{ ssm_parameter_path }}/instance_type", description: "Instance type of Web Servers", value: "{{ instance_type }}" }
+    - { type: "String", name: "/{{ ssm_parameter_path }}/key_name", description: "SSH key name", value: "{{ key_name }}" }
+    - { type: "String", name: "/{{ ssm_parameter_path }}/vpc_cidr", description: "VPC CIDR", value: "{{ vpc_cidr }}" }
+    - { type: "String", name: "/{{ ssm_parameter_path }}/public_subnet_1_cidr", description: "Public subnet in the first AZ", value: "{{ public_subnet_1_cidr }}" }
+    - { type: "String", name: "/{{ ssm_parameter_path }}/public_subnet_2_cidr", description: "Public subnet in the second AZ", value: "{{ public_subnet_2_cidr }}" }
+    - { type: "String", name: "/{{ ssm_parameter_path }}/private_subnet_1_cidr", description: "Private subnet in the first AZ", value: "{{ private_subnet_1_cidr }}" }
+    - { type: "String", name: "/{{ ssm_parameter_path }}/private_subnet_2_cidr", description: "Private subnet in the second AZ", value: "{{ private_subnet_2_cidr }}" }
+    - { type: "String", name: "/{{ ssm_parameter_path }}/dns_name", description: "Dns Name", value: "{{ dns_name }}" }
+
+- name: Join default ssm parameters with user defined parameters
+  ansible.builtin.set_fact:
+    ssm_parameters: "{{ default_ssm_parameters + ssm_parameters | default([]) }}"
+
+- name: Create parameter store entries
+  community.aws.ssm_parameter:
+    name: "{{ item.name }}"
+    description: "{{ item.description }}"
+    value: "{{ item.value }}"
+    string_type: "{{ item.type }}"
+    state: present
+    region: "{{ aws_region }}"
+  no_log: true
+  loop: "{{ ssm_parameters }}"

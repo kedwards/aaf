@@ -1,0 +1,14 @@
+---
+- name: Get git root directory
+  ansible.builtin.shell: >
+    git rev-parse --show-toplevel
+  register: cmd_output
+  changed_when: false
+
+- name: Set root directory variable
+  ansible.builtin.set_fact:
+    root_dir: "{{ cmd_output.stdout }}"
+
+- name: Set cloud formation template directory
+  ansible.builtin.set_fact:
+    cf_dir: "{{ root_dir }}/cloudformation"

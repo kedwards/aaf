@@ -1,0 +1,37 @@
+---
+- name: Test httpd role
+  hosts: "tag_Group_{{ test_hosts }}_webservers"
+  gather_facts: true
+  vars:
+    hostname: "{{ hostvars[inventory_hostname].name }}"
+  tasks:
+    - name: Check if file 'index.html' exists on server
+      ansible.builtin.stat:
+        path: /var/www/html/index.html
+
+    - name: Check if file 'info.php' exists on server
+      ansible.builtin.stat:
+        path: /var/www/html/info.php
+
+    - name: Check if homepage is accessible
+      ansible.builtin.uri:
+        url: http://{{ inventory_hostname }}
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 2
+      delay: 10
+
+    - name: Check if homepage contains 'Ansible and Friend on AWS!' string
+      ansible.builtin.uri:
+        url: http://{{ inventory_hostname }}
+        return_content: true
+      register: response
+      failed_when: "'Ansible and Friend on AWS!' not in response.content"
+
+    - name: Check if server-status contains 'Apache Server Status' string
+      ansible.builtin.uri:
+        url: http://{{ inventory_hostname }}/server-status
+        return_content: true
+      register: response
+      failed_when: "'Apache Server Status' not in response.content"

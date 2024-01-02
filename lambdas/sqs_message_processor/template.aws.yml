@@ -1,0 +1,43 @@
+---
+Description: Lambda User Functions
+
+Parameters:
+  LambdaFunctionName:
+    Type: String
+    AllowedPattern: "^[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+$"
+    Description: Lambda function name. (Recommend to keep default)
+    Default: qp-cf-sqs-message-processor
+
+Resources:
+  UserFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: ./build
+      FunctionName: !Ref LambdaFunctionName
+      Handler: main
+      MemorySize: 128
+      Role: !ImportValue Qp-LambdaRoleArn
+      Runtime: go1.x
+      Description: A user lambda function
+      Timeout: 30
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt UserFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: 'apigateway.amazonaws.com'
+
+  LambdaLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${LambdaFunctionName}"
+      RetentionInDays: 1
+
+Outputs:
+  UserRestApiId:
+    Description: The rest api id
+    Value:  !Ref ApiGatewayRestApi
+    Export:
+      Name: Qp-UserRestApiId
+

@@ -1,0 +1,10 @@
+---
+- name: Create iam resources
+  amazon.aws.cloudformation:
+    stack_name: "{{ stack_prefix }}-iam"
+    state: present
+    region: "{{ aws_region }}"
+    template: "{{ cf_dir }}/iam.aws.yml"
+    create_changeset: "{{ create_changeset }}"
+    template_parameters: 
+      StackPrefix: "{{ stack_prefix }}"

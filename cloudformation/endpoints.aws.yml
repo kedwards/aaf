@@ -1,0 +1,198 @@
+Description: VPC endpoints for access to AWS services
+
+Parameters:
+  RouteTables:
+    Description: The route tables to use
+    Type: CommaDelimitedList
+
+  Subnets:
+    Description: The subnets to use
+    Type: List<AWS::EC2::Subnet::Id>
+
+  VpcId:
+    Description: The VPC ID to use
+    Type: String
+
+Resources:
+  Ec2VpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt VpcEndpointSecurityGroup.GroupId
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2"
+      SubnetIds: !Ref Subnets
+      VpcEndpointType: Interface
+      VpcId: !Ref VpcId
+
+  Ec2MessagesVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt VpcEndpointSecurityGroup.GroupId
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2messages"
+      SubnetIds: !Ref Subnets
+      VpcEndpointType: Interface
+      VpcId: !Ref VpcId
+
+  EcrVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt VpcEndpointSecurityGroup.GroupId
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ecr.api"
+      SubnetIds: !Ref Subnets
+      VpcEndpointType: Interface
+      VpcId: !Ref VpcId
+
+  LogsVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt VpcEndpointSecurityGroup.GroupId
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.logs"
+      SubnetIds: !Ref Subnets
+      VpcEndpointType: Interface
+      VpcId: !Ref VpcId
+
+  DkrVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt VpcEndpointSecurityGroup.GroupId
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ecr.dkr"
+      SubnetIds: !Ref Subnets
+      VpcEndpointType: Interface
+      VpcId: !Ref VpcId
+
+  S3VpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: Amazon ECR Layer Repository Access
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Sub "arn:aws:s3:::prod-${AWS::Region}-starport-layer-bucket/*"
+          - Sid: Amazon Linux YUM Repository Access
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Sub "arn:aws:s3:::*repo*-${AWS::Region}-*/*"
+      PrivateDnsEnabled: false
+      RouteTableIds: !Ref RouteTables
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
+      VpcEndpointType: Gateway
+      VpcId: !Ref VpcId
+
+  SecretsVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt VpcEndpointSecurityGroup.GroupId
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.secretsmanager"
+      SubnetIds: !Ref Subnets
+      VpcEndpointType: Interface
+      VpcId: !Ref VpcId
+
+  SsmVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt VpcEndpointSecurityGroup.GroupId
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      SubnetIds: !Ref Subnets
+      VpcEndpointType: Interface
+      VpcId: !Ref VpcId
+
+  SsmMessagesVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt VpcEndpointSecurityGroup.GroupId
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+      SubnetIds: !Ref Subnets
+      VpcEndpointType: Interface
+      VpcId: !Ref VpcId
+
+  VpcEndpointClientsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: VPC Endpoint Clients
+      GroupDescription: Security group for VPC Endpoints
+      Tags:
+        - Key: Name
+          Value: VPC Endpoint Clients
+      VpcId: !Ref VpcId
+
+  VpcEndpointClientsSecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      Description: VPC clients acess to endpoint SG
+      DestinationSecurityGroupId: !GetAtt VpcEndpointSecurityGroup.GroupId
+      FromPort: 443
+      GroupId: !GetAtt VpcEndpointClientsSecurityGroup.GroupId
+      IpProtocol: tcp
+      ToPort: 443
+
+  VpcEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: VPC Endpoints
+      GroupDescription: Security group for VPC Endpoints
+      Tags:
+        - Key: Name
+          Value: VPC Endpoints
+      VpcId: !Ref VpcId
+
+  VpcEndpointSecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      CidrIp: 0.0.0.0/0
+      Description: Access to VPC endpoints
+      FromPort: 443
+      GroupId: !GetAtt VpcEndpointSecurityGroup.GroupId
+      IpProtocol: tcp
+      ToPort: 443
+
+  VpcEndpointSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: VPC Endpoint from clients
+      FromPort: 443
+      GroupId: !GetAtt VpcEndpointSecurityGroup.GroupId
+      IpProtocol: tcp
+      SourceSecurityGroupId: !GetAtt VpcEndpointClientsSecurityGroup.GroupId
+      ToPort: 443
+
+Outputs:
+  VpcEndpointClientsSecurityGroupId:
+    Description: VPC Endpoint Clients Security Group Id
+    Value: !GetAtt VpcEndpointClientsSecurityGroup.GroupId
+    Export:
+      Name: !Join
+        - '-'
+        - - !Ref "AWS::StackName"
+          - VpcEndpointClientsSecurityGroupId
+
+  VpcEndpointSecurityGroupId:
+    Description: VPC Endpoint Security Group Id
+    Value: !GetAtt VpcEndpointSecurityGroup.GroupId
+    Export:
+      Name: !Join
+        - '-'
+        - - !Ref "AWS::StackName"
+          - VpcEndpointSecurityGroupId

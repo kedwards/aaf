@@ -1,0 +1,12 @@
+Description: Ev2 keypair resources
+
+Parameters:
+  KeyName:
+    Description: Name of the keypair
+    Type: String
+
+Resources:
+  KeyPair:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyName: !Ref KeyName

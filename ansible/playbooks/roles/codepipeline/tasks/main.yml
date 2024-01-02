@@ -1,0 +1,12 @@
+---
+- name: Create codepipeline resources
+  amazon.aws.cloudformation:
+    stack_name: "{{ stack_prefix }}-codepipeline"
+    state: present
+    region: "{{ aws_region }}"
+    template: "{{ cf_dir }}/codepipeline.aws.yml"
+    create_changeset: "{{ create_changeset }}"
+    template_parameters:
+      S3ArtifactLocation: "{{ s3_bucket_name }}"
+      RepositoryName: "{{ repository_name }}"
+      StackPrefix: "{{ stack_prefix }}"

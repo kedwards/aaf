@@ -1,0 +1,10 @@
+---
+collections:
+  - name: amazon.aws
+  - name: community.aws
+  - name: community.general
+  - name: community.docker
+  - name: community.kubernetes
+  - name: kubernetes.core
+  - name: ansible.posix
+  - name: onepassword.connect

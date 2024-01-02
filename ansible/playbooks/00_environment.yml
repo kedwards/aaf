@@ -1,0 +1,14 @@
+---
+- name: Setup environment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+    - setup
+    - iam
+    - s3bucket
+    - ec2_keypair
+    - codecommit
+    - codebuild
+    - codepipeline
+    - ssm_parameters

@@ -1,0 +1,8 @@
+---
+- name: Provision compute resources
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+    - setup
+    - compute

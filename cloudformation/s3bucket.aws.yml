@@ -1,0 +1,49 @@
+Description: S3 resources
+
+Parameters:
+  DaysBeforeExpiration:
+    Description: Number of days before expiring non-current objects
+    Type: Number
+
+  S3BucketName:
+    Description: Name of the S3 Bucket
+    Type: String
+
+Resources:
+  S3Bucket:
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      BucketName: !Ref S3BucketName
+      LifecycleConfiguration:
+        Rules:
+          - AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: !Ref DaysBeforeExpiration
+            Id: Delete non-current versions
+            NoncurrentVersionExpirationInDays: !Ref DaysBeforeExpiration
+            Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+Outputs:
+  S3BucketName:
+    Description: The NAME of the S3 Bucket
+    Value: !Ref S3Bucket
+    Export:
+      Name: !Sub "${AWS::StackName}-S3BucketName"
+
+  S3BucketArn:
+    Description: The ARN of the S3 Bucket
+    Value: !GetAtt S3Bucket.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-S3BucketArn"

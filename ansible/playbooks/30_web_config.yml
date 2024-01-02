@@ -1,0 +1,7 @@
+---
+- name: Configure apache web servers
+  hosts: "tag_Group_{{ hosts }}_webservers"
+  gather_facts: true
+  become: true
+  roles:
+    - role: httpd

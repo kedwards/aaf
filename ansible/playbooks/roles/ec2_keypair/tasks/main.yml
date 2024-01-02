@@ -1,0 +1,44 @@
+---
+- name: Set key_name fact
+  ansible.builtin.set_fact:
+    key_name: "{{ private_key | basename | split('.') | first }}"
+
+- name: Check if keyfile exists
+  ansible.builtin.stat:
+    path: "{{ private_key }}"
+  register: keyfile
+
+- name: Create ec2 keypair
+  amazon.aws.cloudformation:
+    stack_name: "{{ stack_prefix }}-keys"
+    state: present
+    region: "{{ aws_region }}"
+    template: "{{ cf_dir }}/ec2_keypair.aws.yml"
+    create_changeset: "{{ create_changeset }}"
+    template_parameters:
+      KeyName: "{{ key_name }}"
+
+- name: Get kepair key id
+  ansible.builtin.command: >
+    aws ec2 describe-key-pairs \
+      --filters Name=key-name,Values={{ key_name }} \
+      --query KeyPairs[*].KeyPairId \
+      --output text
+  register: keypair_id
+  changed_when: false
+
+- name: Get keypair material
+  ansible.builtin.command: >
+    aws ssm get-parameter \
+      --name /ec2/keypair/{{ keypair_id.stdout }} \
+      --with-decryption \
+      --query Parameter.Value \
+      --output text
+  register: keypair_material
+  changed_when: false
+
+- name: Save private key to a .pem file
+  ansible.builtin.copy:
+    content: "{{ keypair_material.stdout }}"
+    dest: "{{ private_key }}"
+    mode: "0600"

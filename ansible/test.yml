@@ -1,0 +1,6 @@
+---
+- name: Setup
+  ansible.builtin.import_playbook: playbooks/00_environment.yml
+
+- name: Integration Test
+  ansible.builtin.import_playbook: playbooks/40_integration_tests.yml

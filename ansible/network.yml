@@ -1,0 +1,3 @@
+---
+- name: Networking resources
+  ansible.builtin.import_playbook: playbooks/10_network.yml

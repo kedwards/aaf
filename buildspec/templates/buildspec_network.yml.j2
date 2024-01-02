@@ -1,0 +1,28 @@
+version: 0.2
+
+env:
+  variables:
+    TEMPLATE_URL: "https://{{ stack_prefix }}-{{ project }}-{{ aws_profile }}-{{ aws_region }}.s3.{{ aws_region }}.amazonaws.com/artifacts/network.aws.yml"
+    ENDPOINTS_TEMPLATE_URL: "https://{{ stack_prefix }}-{{ project }}-{{ aws_profile }}-{{ aws_region }}.s3.{{ aws_region }}.amazonaws.com/artifacts/endpoints.aws.yml"
+    AWS_REGION: "{{ aws_region }}"
+    TAG_ENVIRONMENT: "{{ project }}"
+  parameter-store:
+    VPC_CIDR: "/{{ stack_prefix }}/{{ project }}/vpc_cidr"
+    PUBLIC_SUBNET_1_CIDR: "/{{ stack_prefix }}/{{ project }}/public_subnet_1_cidr"
+    PUBLIC_SUBNET_2_CIDR: "/{{ stack_prefix }}/{{ project }}/public_subnet_2_cidr"
+    PRIVATE_SUBNET_1_CIDR: "/{{ stack_prefix }}/{{ project }}/private_subnet_1_cidr"
+    PRIVATE_SUBNET_2_CIDR: "/{{ stack_prefix }}/{{ project }}/private_subnet_2_cidr"
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - pip install -r requirements.txt -q
+  build:
+    commands:
+      - make deploy ENV={{ aws_profile }} PLAY=network REGION={{ aws_region }} EVARS="prefix={{ prefix }}"
+  post_build:
+    commands:
+      - cd ansible
+      - ansible-playbook playbooks/roles/network/tests/test.yml -e stack_prefix={{ stack_prefix }}

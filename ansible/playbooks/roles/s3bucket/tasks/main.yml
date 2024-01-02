@@ -1,0 +1,11 @@
+---
+- name: Create s3 bucket resources
+  amazon.aws.cloudformation:
+    stack_name: "{{ stack_prefix }}-s3bucket"
+    state: present
+    region: "{{ aws_region }}"
+    template: "{{ cf_dir }}/s3bucket.aws.yml"
+    create_changeset: "{{ create_changeset }}"
+    template_parameters:
+      S3BucketName: "{{ s3_bucket_name }}"
+      DaysBeforeExpiration: "{{ s3_object_days_before_expiration }}"

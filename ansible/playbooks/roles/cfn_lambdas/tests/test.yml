@@ -1,0 +1,51 @@
+---
+- name: Test function role
+  gather_facts: false
+  hosts: localhost
+  vars:
+    stack_name: "qp-cf-lambda-user"
+    aws_region: us-west-2
+  pre_tasks:
+    - name: Get facts about the stack
+      amazon.aws.cloudformation_info:
+        stack_name: "{{ stack_name }}"
+      register: stack_facts
+
+    - name: Set endpoint uri
+      ansible.builtin.set_fact:
+        user_endpoint_uri: "{{ stack_facts.cloudformation[stack_name].stack_outputs['UserRestApiId'] }}"
+
+  tasks:
+    - name: Insert record
+      ansible.builtin.uri:
+        url: "https://{{ user_endpoint_uri }}.execute-api.{{ aws_region }}.amazonaws.com/v1/user"
+        method: POST
+        body_format: json
+        body: '{"email": "kedwards@kevinedwards.ca", "firstName": "Kevin", "lastName": "Edwards"}'
+        status_code: 201
+
+    - name: Test userlist has inserted record
+      ansible.builtin.uri:
+        url: "https://{{ user_endpoint_uri }}.execute-api.{{ aws_region }}.amazonaws.com/v1/user"
+        method: GET
+        body_format: json
+        status_code: 200
+      register: userlist
+      failed_when: "userlist.json[0].email != 'kedwards@kevinedwards.ca'"
+
+  post_tasks:
+    - name: DELETE record
+      ansible.builtin.uri:
+        url: "https://{{ user_endpoint_uri }}.execute-api.{{ aws_region }}.amazonaws.com/v1/user?email=kedwards@kevinedwards.ca"
+        method: DELETE
+        status_code: 200
+
+    - name: Echo user api request samples
+      ansible.builtin.debug:
+        msg:
+          - "Set Endpoint        : endpoint=https://{{ user_endpoint_uri }}.execute-api.{{ aws_region }}.amazonaws.com/v1/user"
+          - "Insert user         : curl --header \"Content-Type: application/json\" --request POST --data '{\"email\": \"kedwards@kevinedwards.ca\", \"firstName\": \"Kevin\", \"lastName\": \"Edwards\"}' $endpoint"
+          - "List users          : curl -X GET $endpoint"
+          - "Update user         : curl --header \"Content-Type: application/json\" --request PUT --data '{\"email\": \"kedwards@kevinedwards.ca\", \"firstName\": \"Kevin Great\", \"lastName\": \"Edwards\"}' $endpoint"
+          - "Delete user (email) : curl -X DELETE $endpoint?email=kedwards@kevinedwards.ca"
+          - "List user (email)   : curl -X GET $endpoint?email=kedwards@kevinedwards.ca"

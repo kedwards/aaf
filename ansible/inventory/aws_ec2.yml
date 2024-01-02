@@ -1,0 +1,17 @@
+plugin: amazon.aws.aws_ec2
+remote_user: ec2-user
+regions:
+keyed_groups:
+  - key: tags.Name
+    prefix: tag_Name_
+    separator: ''
+  - key: tags.Group
+    prefix: tag_Group_
+    separator: ''
+hostnames:
+  - dns-name
+  - ip-address
+  - private-dns-name
+  - private-ip-address
+compose:
+  ansible_host: ip_address

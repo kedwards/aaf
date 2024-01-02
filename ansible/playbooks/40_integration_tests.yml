@@ -1,0 +1,9 @@
+---
+- name: Test project environment and deployed applications
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    stack_prefix: "{{ stack_prefix }}"
+  roles:
+    - integration_tests

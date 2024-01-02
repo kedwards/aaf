@@ -1,0 +1,7 @@
+---
+- name: Template buildspec files
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "{{ root_dir }}/buildspec/{{ item | basename | regex_replace('buildspec_', '')  | regex_replace('\\.j2$', '') }}"
+    mode: "0644"
+  with_fileglob: "{{ root_dir }}/buildspec/templates/buildspec_*.j2"

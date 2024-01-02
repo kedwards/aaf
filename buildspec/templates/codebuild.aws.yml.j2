@@ -1,0 +1,374 @@
+Description: Code build projects
+
+Parameters:
+  ArtifactS3Location:
+    Description: The location of the artifacts in S3
+    Type: String
+
+  RepositoryName:
+    Description: Name of the project repository
+    Type: String
+
+  SsmParameterPath:
+    Description: Prefix path to SSm parameters
+    Type: String
+
+  StackPrefix:
+    Description: Prefix to use for stack names
+    Type: String
+
+Resources:
+  CodeBuildBaseIAMManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${StackPrefix}-CodeBuildBasePolicy"
+      Path: /service-role/
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Resource:
+              - !Sub
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${LogGroupName}
+                - LogGroupName: !Ref CodeBuildCloudWatchLogGroup
+              - !GetAtt CodeBuildCloudWatchLogGroup.Arn
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+          - Effect: Allow
+            Resource:
+              - !Sub "arn:aws:s3:::codepipeline-${AWS::Region}-*"
+              - !Sub "arn:aws:s3:::${ArtifactS3Location}"
+              - !Sub "arn:aws:s3:::${ArtifactS3Location}/*"
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:GetBucketAcl
+              - s3:GetBucketLocation
+          - Effect: Allow
+            Resource:
+              - !Sub "arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:${RepositoryName}"
+            Action:
+              - codecommit:*
+          - Effect: Allow
+            Resource:
+              - !Ref CodeBuildReportGroup
+            Action:
+              - codebuild:CreateReportGroup
+              - codebuild:CreateReport
+              - codebuild:UpdateReport
+              - codebuild:BatchPutTestCases
+              - codebuild:BatchPutCodeCoverages
+          - Effect: Allow
+            Resource:
+              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SsmParameterPath}/*"
+            Action:
+              - ssm:GetParameters
+          - Effect: Allow
+            Resource:
+              - '*'
+            Action:
+              - codebuild:* # StartBuild
+              - cloudformation:* # ValidateTemplate,DescribeStacks
+              - ec2:*
+              - autoscaling:*
+              - elasticloadbalancing:*
+              - elasticloadbalancingv2:*
+              - iam:*
+              - ssm:* # GetParameter
+              - route53:* # GetHostedZone
+        # - Effect: Allow
+        #   Resource:
+        #     - !Sub "arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:project/*"
+        #   Action:
+        #     - codebuild:*
+  CodeBuildReportGroup:
+    Type: AWS::CodeBuild::ReportGroup
+    Properties:
+      ExportConfig:
+        ExportConfigType: NO_EXPORT
+      Name: !Sub "${StackPrefix}-codebuild"
+      Type: TEST
+
+  CodeBuildCloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${StackPrefix}/codebuild"
+      RetentionInDays: 7
+
+  CodeBuildVpcIAMManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${StackPrefix}-CodeBuildVpcPolicy"
+      Path: /service-role/
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Resource:
+              - '*'
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeDhcpOptions
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DeleteNetworkInterface
+              - ec2:DescribeSubnets
+              - ec2:DescribeSecurityGroups
+              - ec2:DescribeVpcs
+
+  CodeBuildCloudWatchLogsIAMManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${StackPrefix}-CodeBuildCloudWatchLogsPolicy"
+      Path: /service-role/
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Resource:
+              - !Sub
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${LogGroupName}
+                - LogGroupName: !Ref CodeBuildCloudWatchLogGroup
+              - !GetAtt CodeBuildCloudWatchLogGroup.Arn
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+          - Effect: Allow
+            Resource: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*"
+            Action:
+              - ec2:CreateNetworkInterfacePermission
+            Condition:
+              StringEquals:
+
+                # "ec2:Subnet":
+                #   - !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet1}"
+                #   - !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet2}"
+                ec2:AuthorizedService: codebuild.amazonaws.com
+
+  CodeBuildServiceIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /service-role/
+      RoleName: !Sub "${StackPrefix}-code-service-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      MaxSessionDuration: 3600
+      ManagedPolicyArns:
+        - !Ref CodeBuildBaseIAMManagedPolicy
+        - !Ref CodeBuildCloudWatchLogsIAMManagedPolicy
+        - !Ref CodeBuildVpcIAMManagedPolicy
+
+  ValidateCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${StackPrefix}-cfn-validate"
+      Description: Validate CloudFormation templates and deploy to s3
+      Source:
+        BuildSpec: buildspec_files/buildspec_validate.yml
+        GitCloneDepth: 1
+        GitSubmodulesConfig:
+          FetchSubmodules: false
+        InsecureSsl: false
+        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
+        Type: CODECOMMIT
+      Artifacts:
+        EncryptionDisabled: false
+        Location: !Ref ArtifactS3Location
+        Name: artifacts
+        NamespaceType: NONE
+        OverrideArtifactName: false
+        Packaging: NONE
+        Path: ""
+        Type: S3
+      Cache:
+        Type: NO_CACHE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole: !GetAtt CodeBuildServiceIAMRole.Arn
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 480
+      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
+      BadgeEnabled: true
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodeBuildCloudWatchLogGroup
+          StreamName: cfn-validate-s3
+        S3Logs:
+          Status: DISABLED
+          EncryptionDisabled: false
+      Visibility: PRIVATE
+
+  NetworkCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${StackPrefix}-cfn-network"
+      Description: Build VPC network using CloudFormation and Ansible
+      Source:
+        BuildSpec: buildspec_files/buildspec_network.yml
+        GitCloneDepth: 1
+        GitSubmodulesConfig:
+          FetchSubmodules: false
+        InsecureSsl: false
+        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
+        Type: CODECOMMIT
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Cache:
+        Type: NO_CACHE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole: !GetAtt CodeBuildServiceIAMRole.Arn
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 480
+      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
+      BadgeEnabled: true
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodeBuildCloudWatchLogGroup
+          StreamName: cfn-network
+        S3Logs:
+          Status: DISABLED
+          EncryptionDisabled: false
+      Visibility: PRIVATE
+
+  ComputeCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${StackPrefix}-cfn-compute"
+      Description: Build EC2 resources for Web Servers using CloudFormation and Ansible
+      Source:
+        BuildSpec: buildspec_files/buildspec_compute.yml
+        GitCloneDepth: 1
+        GitSubmodulesConfig:
+          FetchSubmodules: false
+        InsecureSsl: false
+        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
+        Type: CODECOMMIT
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Cache:
+        Type: NO_CACHE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole: !GetAtt CodeBuildServiceIAMRole.Arn
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 480
+      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
+      BadgeEnabled: true
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodeBuildCloudWatchLogGroup
+          StreamName: cfn-compute
+        S3Logs:
+          Status: DISABLED
+          EncryptionDisabled: false
+      Visibility: PRIVATE
+
+  WebConfigCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${StackPrefix}-web-config"
+      Description: Configure web servers using ansible
+      Source:
+        BuildSpec: buildspec_files/buildspec_web_config.yml
+        GitCloneDepth: 1
+        GitSubmodulesConfig:
+          FetchSubmodules: false
+        InsecureSsl: false
+        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
+        Type: CODECOMMIT
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Cache:
+        Type: NO_CACHE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole: !GetAtt CodeBuildServiceIAMRole.Arn
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 480
+      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
+      BadgeEnabled: true
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodeBuildCloudWatchLogGroup
+          StreamName: web-config
+        S3Logs:
+          Status: DISABLED
+          EncryptionDisabled: false
+      Visibility: PRIVATE
+
+  TestCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${StackPrefix}-ansible-test"
+      Description: Test the final environment and deployed applications
+      Source:
+        BuildSpec: buildspec_files/buildspec_integration_tests.yml
+        GitCloneDepth: 1
+        GitSubmodulesConfig:
+          FetchSubmodules: false
+        InsecureSsl: false
+        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
+        Type: CODECOMMIT
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Cache:
+        Type: NO_CACHE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole: !GetAtt CodeBuildServiceIAMRole.Arn
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 480
+      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
+      BadgeEnabled: true
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodeBuildCloudWatchLogGroup
+          StreamName: ansible-test
+        S3Logs:
+          Status: DISABLED
+          EncryptionDisabled: false
+      Visibility: PRIVATE
+
+Outputs:
+  CodeBuildServiceIAMRole:
+    Description: The ARN of the codebuild service role
+    Value: !GetAtt CodeBuildServiceIAMRole.Arn
+    Export:
+      Name: !Join ['-', [!Ref "AWS::StackName", ServiceRoleArn]]

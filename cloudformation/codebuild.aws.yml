@@ -1,0 +1,255 @@
+Description: Codebuild resources
+
+Parameters:
+  CodeBuildServiceRoleArn:
+    Description: Arn of the CodeBuild service role
+    Default: $iam-CodeBuildServiceRoleArn
+    Type: String
+
+  RepositoryName:
+    Description: Name of the repository
+    Type: String
+
+  S3BucketName:
+    Description: Name of the S3 bucket for build output and logs
+    Type: String
+    
+  StackPrefix:
+    Description: Prefix for stack resources
+    Type: String
+
+Conditions:
+  CodeBuildServiceRoleArnIsImported:
+    !And [ 
+      !Not [ !Equals [ !Ref CodeBuildServiceRoleArn, "" ] ],
+      !Equals [ !Select [ 0, !Split [ "$", !Ref CodeBuildServiceRoleArn ] ], "" ]
+    ]
+
+Resources:
+  CodeBuildReportGroup:
+    Type: AWS::CodeBuild::ReportGroup
+    Properties:
+      ExportConfig:
+        ExportConfigType: NO_EXPORT
+      Name: !Sub "${StackPrefix}-codebuild"
+      Type: TEST
+
+  CodeBuildCloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${StackPrefix}/codebuild"
+      RetentionInDays: 7
+
+  ValidateProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        ArtifactIdentifier: validate_templates
+        Location: !Ref S3BucketName
+        Name: artifacts
+        OverrideArtifactName: true
+        Path: ""
+        Type: S3
+      Description: Validate cloudFormation templates
+      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
+      Environment: 
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        Type: LINUX_CONTAINER
+      LogsConfig: 
+        CloudWatchLogs: 
+          Status: "ENABLED"
+          GroupName: !Sub "${StackPrefix}-codebuild-logs"
+          StreamName: validate
+        S3Logs: 
+          Status: "ENABLED"
+          Location: !Sub "${S3BucketName}/build_logs"
+          EncryptionDisabled: false
+      Name: !Sub "${StackPrefix}-cfn-validate"
+      TimeoutInMinutes: 10
+      QueuedTimeoutInMinutes: 5
+      ServiceRole: 
+        !If 
+          - CodeBuildServiceRoleArnIsImported
+          - Fn::ImportValue: 
+              !Join [ "-", [ !Sub "${StackPrefix}", !Select [ 1, !Split [ "$", !Ref CodeBuildServiceRoleArn ] ] ] ]
+          - !Join [ "-", [ !Sub "${StackPrefix}", "CodeBuildServiceRole" ] ]
+      Source:
+        BuildSpec: buildspec/validate.yml
+        GitCloneDepth: 1
+        InsecureSsl: false
+        Type: CODECOMMIT
+        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
+      Visibility: "PRIVATE"
+
+  NetworkProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${StackPrefix}-cfn-network"
+      Description: Deploy network
+      Source:
+        BuildSpec: buildspec/network.yml
+        GitCloneDepth: 1
+        GitSubmodulesConfig:
+          FetchSubmodules: false
+        InsecureSsl: false
+        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
+        Type: CODECOMMIT
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Cache:
+        Type: NO_CACHE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole: 
+        !If 
+          - CodeBuildServiceRoleArnIsImported
+          - Fn::ImportValue: 
+              !Join [ "-", [ !Sub "${StackPrefix}", !Select [ 1, !Split [ "$", !Ref CodeBuildServiceRoleArn ] ] ] ]
+          - !Join [ "-", [ !Sub "${StackPrefix}", "CodeBuildServiceRole" ] ]
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 480
+      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
+      BadgeEnabled: true
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodeBuildCloudWatchLogGroup
+          StreamName: cfn-network
+        S3Logs:
+          Status: DISABLED
+          EncryptionDisabled: false
+      Visibility: PRIVATE
+
+  ComputeCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${StackPrefix}-cfn-compute"
+      Description: Build EC2 resources for Web Servers using CloudFormation and Ansible
+      Source:
+        BuildSpec: buildspec/compute.yml
+        GitCloneDepth: 1
+        GitSubmodulesConfig:
+          FetchSubmodules: false
+        InsecureSsl: false
+        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
+        Type: CODECOMMIT
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Cache:
+        Type: NO_CACHE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole: 
+        !If 
+          - CodeBuildServiceRoleArnIsImported
+          - Fn::ImportValue: 
+              !Join [ "-", [ !Sub "${StackPrefix}", !Select [ 1, !Split [ "$", !Ref CodeBuildServiceRoleArn ] ] ] ]
+          - !Join [ "-", [ !Sub "${StackPrefix}", "CodeBuildServiceRole" ] ]
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 480
+      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
+      BadgeEnabled: true
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodeBuildCloudWatchLogGroup
+          StreamName: cfn-compute
+        S3Logs:
+          Status: DISABLED
+          EncryptionDisabled: false
+      Visibility: PRIVATE
+
+  WebConfigCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${StackPrefix}-web-config"
+      Description: Configure web servers using ansible
+      Source:
+        BuildSpec: buildspec/web_config.yml
+        GitCloneDepth: 1
+        GitSubmodulesConfig:
+          FetchSubmodules: false
+        InsecureSsl: false
+        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
+        Type: CODECOMMIT
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Cache:
+        Type: NO_CACHE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole: 
+        !If 
+          - CodeBuildServiceRoleArnIsImported
+          - Fn::ImportValue: 
+              !Join [ "-", [ !Sub "${StackPrefix}", !Select [ 1, !Split [ "$", !Ref CodeBuildServiceRoleArn ] ] ] ]
+          - !Join [ "-", [ !Sub "${StackPrefix}", "CodeBuildServiceRole" ] ]
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 480
+      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
+      BadgeEnabled: true
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodeBuildCloudWatchLogGroup
+          StreamName: web-config
+        S3Logs:
+          Status: DISABLED
+          EncryptionDisabled: false
+      Visibility: PRIVATE
+
+  TestCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${StackPrefix}-ansible-test"
+      Description: Test the final environment and deployed applications
+      Source:
+        BuildSpec: buildspec/integration_tests.yml
+        GitCloneDepth: 1
+        GitSubmodulesConfig:
+          FetchSubmodules: false
+        InsecureSsl: false
+        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
+        Type: CODECOMMIT
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Cache:
+        Type: NO_CACHE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+      ServiceRole: 
+        !If 
+          - CodeBuildServiceRoleArnIsImported
+          - Fn::ImportValue: 
+              !Join [ "-", [ !Sub "${StackPrefix}", !Select [ 1, !Split [ "$", !Ref CodeBuildServiceRoleArn ] ] ] ]
+          - !Join [ "-", [ !Sub "${StackPrefix}", "CodeBuildServiceRole" ] ]
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 480
+      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
+      BadgeEnabled: true
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref CodeBuildCloudWatchLogGroup
+          StreamName: ansible-test
+        S3Logs:
+          Status: DISABLED
+          EncryptionDisabled: false
+      Visibility: PRIVATE

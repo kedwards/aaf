@@ -1,0 +1,79 @@
+---
+- name: Delete Stacks
+  async: 1440
+  poll: 0
+  amazon.aws.cloudformation:
+    region: "{{ aws_region }}"
+    stack_name: "{{ stack_prefix }}-{{ item }}"
+    state: absent
+  loop:
+    - lambda-user
+    - compute
+    - codepipeline
+    - codebuild
+    - codecommit
+  register: stacks_async_list
+  changed_when: false
+
+- name: Setup variable for async tasks empty
+  ansible.builtin.set_fact:
+    task_async_list: []
+
+- name: Setup async task list
+  ansible.builtin.set_fact:
+    task_async_list: "{{  task_async_list + stacks_async_list.results  }}"
+
+- name: Async check
+  ansible.builtin.async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  retries: 720
+  loop: "{{ task_async_list }}"
+  when: item.ansible_job_id is defined
+
+- name: Delete Stacks
+  async: 1440
+  poll: 0
+  amazon.aws.cloudformation:
+    region: "{{ aws_region }}"
+    stack_name: "{{ stack_prefix }}-{{ item }}"
+    state: absent
+  loop:
+    - iam
+    - keys
+    - endpoints
+    - network
+  register: stacks_async_list
+  changed_when: false
+
+- name: Setup variable for async tasks empty
+  ansible.builtin.set_fact:
+    task_async_list: []
+
+- name: Setup async task list
+  ansible.builtin.set_fact:
+    task_async_list: "{{  task_async_list + stacks_async_list.results  }}"
+
+- name: Async check
+  ansible.builtin.async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  retries: 720
+  loop: "{{ task_async_list }}"
+  when: item.ansible_job_id is defined
+
+- name: Empty and delete s3buckets
+  ansible.builtin.command: "{{ role_path }}/files/delete-s3buckets.sh {{ stack_prefix }}"
+  changed_when: false
+
+- name: Delete s3bucket stack
+  amazon.aws.cloudformation:
+    stack_name: "{{ stack_prefix }}-s3bucket"
+    state: absent
+    region: "{{ aws_region }}"
+
+- name: Delete parameter store entries
+  ansible.builtin.command: "{{ role_path }}/files/delete-ssm-parameters.sh {{ stack_prefix }}"
+  changed_when: false

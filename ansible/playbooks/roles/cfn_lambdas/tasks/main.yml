@@ -1,0 +1,23 @@
+---
+- name: Find all lambda folders
+  ansible.builtin.find:
+    paths: "{{ root_dir }}/lambdas"
+    recurse: false
+    file_type: directory
+  register: lambda_functions
+
+- name: Set function names
+  ansible.builtin.set_fact:
+    lambdas: "{{ lambda_functions.files | map(attribute='path') | map('basename') | list }}"
+
+- name: Build lambda resources
+  ansible.builtin.shell: |
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/main cmd/main.go
+    find ./build/ -not -path '*/.*' -exec touch -a -m -t"201001010000.00" {} \;
+    aws cloudformation package --template-file template.aws.yml --s3-bucket {{ s3_bucket_name }} --s3-prefix lambdas --output-template-file {{ item }}.aws.yml
+    aws cloudformation deploy --template-file {{ item }}.aws.yml --stack-name qp-cf-{{ item }} --region {{ aws_region }}
+    rm -r build {{ item }}.aws.yml
+  args:
+    chdir: "{{ root_dir }}/lambdas/{{ item }}"
+  loop: "{{ lambdas }}"
+  changed_when: false

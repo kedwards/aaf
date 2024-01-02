@@ -1,0 +1,30 @@
+version: 0.2
+
+env:
+  variables:
+    TEMPLATE_URL: "https://{{ stack_prefix }}-{{ project }}-{{ aws_profile }}-{{ aws_region }}.s3.{{ aws_region }}.amazonaws.com/artifacts/compute.aws.yml"
+    AWS_REGION: "{{ aws_region }}"
+    TAG_ENVIRONMENT: "{{ tag_env }}"
+    TAG_NAME: "{{ tag_name }}"
+    TAG_GROUP: "{{ tag_group }}"
+    MAX_SIZE: "{{ max_size }}"
+    MIN_SIZE: "{{ min_size }}"
+    VOLUME_SIZE: "{{ volume_size }}"
+    DESIRED_CAPACITY: "{{ desired_capacity }}"
+    LOAD_BALANCER_TARGET_DRAIN: "{{ load_balancer_target_drain }}"
+
+  parameter-store:
+    INSTANCE_TYPE: "/{{ stack_prefix }}/{{ project }}/instance_type"
+    SSH_LOCATION: "/{{ stack_prefix }}/{{ project }}/ssh_location"
+    KEY_NAME: "/{{ stack_prefix }}/{{ project }}/key_name"
+    DNS_NAME: "/{{ stack_prefix }}/{{ project }}/dns_name"
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - pip install -r requirements.txt -q
+  build:
+    commands:
+      - make deploy ENV={{ aws_profile }} PLAY=compute REGION={{ aws_region }} EVARS="prefix={{ prefix }}"

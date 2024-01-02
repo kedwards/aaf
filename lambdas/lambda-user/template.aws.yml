@@ -1,0 +1,147 @@
+---
+Description: Lambda User Functions
+
+Parameters:
+  LambdaFunctionName:
+    Type: String
+    AllowedPattern: "^[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+$"
+    Description: Lambda function name. (Recommend to keep default)
+    Default: qp-cf-lambda-user
+
+  ApiStageName:
+    Type: String
+    Description: API Staging Name. (Recommend to keep default)
+    Default: v1
+
+  ApiResourcePath:
+    Type: String
+    Description: Resource Path for API.
+    Default: user
+
+  TableName:
+    Description: The DynamoDb table name
+    Type: String
+    Default: LambdaUser
+
+Resources:
+  UserFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: ./build
+      FunctionName: !Ref LambdaFunctionName
+      Handler: main
+      MemorySize: 128
+      Role: !ImportValue Qp-LambdaRoleArn
+      Runtime: go1.x
+      Description: A user lambda function
+      Timeout: 30
+
+  ApiGatewayRestApi:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      ApiKeySourceType: "HEADER"
+      EndpointConfiguration:
+        Types:
+          - "REGIONAL"
+      Name: !Join ["", [{"Ref": "AWS::StackName"}, "-api"]]
+
+  ProxyResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: !Ref ApiResourcePath
+
+  ProxyResourceANY:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !Ref ProxyResource
+      HttpMethod: ANY
+      ApiKeyRequired: true
+      AuthorizationType: NONE
+      OperationName: !Ref ApiResourcePath
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserFunction.Arn}/invocations'
+
+  ApiGatewayModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      ContentType: 'application/json'
+      RestApiId: !Ref ApiGatewayRestApi
+      Schema: {}
+
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref ApiGatewayDeployment
+      Description: Lambda user API stage v1
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: !Ref ApiStageName
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ProxyResourceANY
+    Properties:
+      Description: Lambda API Deployment
+      RestApiId: !Ref ApiGatewayRestApi
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt UserFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: 'apigateway.amazonaws.com'
+
+  LambdaLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${LambdaFunctionName}"
+      RetentionInDays: 1
+
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Name: !Join ["", [{"Ref": "AWS::StackName"}, "-apikey"]]
+      Description: !Join ["", [{"Ref": "AWS::StackName"}, "api key"]]
+      Enabled: true
+      GenerateDistinctId: false
+
+  ApiUsagePlan:
+    Type: "AWS::ApiGateway::UsagePlan"
+    DependsOn: ApiGatewayStage
+    Properties:
+      ApiStages:
+      - ApiId: !Ref ApiGatewayRestApi
+        Stage: !Ref ApiStageName
+      Description: !Join [" ", [{"Ref": "AWS::StackName"}, "usage plan"]]
+      UsagePlanName: !Join ["", [{"Ref": "AWS::StackName"}, "-usage-plan"]]
+
+  ApiUsagePlanKey:
+    Type: "AWS::ApiGateway::UsagePlanKey"
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref ApiUsagePlan
+
+  UserTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: email
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+      TableName: !Ref TableName
+
+Outputs:
+  UserRestApiId:
+    Description: The rest api id
+    Value:  !Ref ApiGatewayRestApi
+    Export:
+      Name: Qp-UserRestApiId
+

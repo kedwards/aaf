@@ -1,0 +1,20 @@
+---
+- name: Create codebuild resources
+  amazon.aws.cloudformation:
+    stack_name: "{{ stack_prefix }}-codebuild"
+    state: present
+    region: "{{ aws_region }}"
+    template: "{{ cf_dir }}/codebuild.aws.yml"
+    create_changeset: "{{ create_changeset }}"
+    template_parameters:
+      S3BucketName: "{{ s3_bucket_name }}"
+      RepositoryName: "{{ repository_name }}"
+      # SsmParameterPath: "{{ ssm_parameter_path }}"
+      StackPrefix: "{{ stack_prefix }}"
+
+- name: Template buildspec files
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "{{ root_dir }}/buildspec/{{ item | basename | regex_replace('buildspec_', '')  | regex_replace('\\.j2$', '') }}"
+    mode: "0644"
+  with_fileglob: "{{ root_dir }}/buildspec/templates/buildspec_*.j2"

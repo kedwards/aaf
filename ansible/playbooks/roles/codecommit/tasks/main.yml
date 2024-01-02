@@ -1,0 +1,14 @@
+---
+- name: Create codecommit repositories
+  amazon.aws.cloudformation:
+    stack_name: "{{ stack_prefix }}-codecommit"
+    state: present
+    region: "{{ aws_region }}"
+    template: "{{ cf_dir }}/codecommit.aws.yml"
+    create_changeset: "{{ create_changeset }}"
+    template_parameters:
+      RepositoryName: "{{ repository_name }}"
+
+- name: Display remote clone url
+  ansible.builtin.debug:
+    msg: "git remote add aws codecommit::{{ aws_region }}://{{ repository_name }}"
