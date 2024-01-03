@@ -2,11 +2,11 @@ version: 0.2
 
 env:
   variables:
-    TEMPLATE_URL: "https://tester-cf-aaf-wtf-us-west-2.s3.us-west-2.amazonaws.com/artifacts/compute.aws.yml"
+    TEMPLATE_URL: "https://tetris-cf-aaf-wtf-us-west-2.s3.us-west-2.amazonaws.com/artifacts/compute.aws.yml"
     AWS_REGION: "us-west-2"
     TAG_ENVIRONMENT: "wtf-aaf"
-    TAG_NAME: "tester-cf_compute"
-    TAG_GROUP: "tester-cf_webservers"
+    TAG_NAME: "tetris-cf_compute"
+    TAG_GROUP: "tetris-cf_webservers"
     MAX_SIZE: "2"
     MIN_SIZE: "1"
     VOLUME_SIZE: "150"
@@ -14,10 +14,10 @@ env:
     LOAD_BALANCER_TARGET_DRAIN: "60"
 
   parameter-store:
-    INSTANCE_TYPE: "/tester-cf/aaf/instance_type"
-    SSH_LOCATION: "/tester-cf/aaf/ssh_location"
-    KEY_NAME: "/tester-cf/aaf/key_name"
-    DNS_NAME: "/tester-cf/aaf/dns_name"
+    INSTANCE_TYPE: "/tetris-cf/aaf/instance_type"
+    SSH_LOCATION: "/tetris-cf/aaf/ssh_location"
+    KEY_NAME: "/tetris-cf/aaf/key_name"
+    DNS_NAME: "/tetris-cf/aaf/dns_name"
 
 phases:
   install:
@@ -27,4 +27,4 @@ phases:
       - pip install -r requirements.txt -q
   build:
     commands:
-      - make deploy ENV=wtf PLAY=compute REGION=us-west-2 EVARS="prefix=tester"
+      - make deploy ENV=wtf PLAY=compute REGION=us-west-2 EVARS="prefix=tetris"

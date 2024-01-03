@@ -34,7 +34,7 @@ public_subnet_2_cidr: 10.0.4.0/24
 
 # EC2 instance information
 desired_capacity: 1
-dns_name: "ansible-aws.rch.{{ aws_profile }}"
+dns_name: "{{ prefix }}.rch.{{ aws_profile }}"
 image_id: /ec2/ami/engine/ami_id
 instance_type: t3.medium
 load_balancer_target_drain: 60
@@ -44,3 +44,4 @@ tag_env: "{{ aws_profile }}-{{ project }}"
 tag_group: "{{ stack_prefix }}_webservers"
 tag_name: "{{ stack_prefix }}_compute"
 volume_size: 150
+web_server_source: "https://s3.amazonaws.com/{{ s3_bucket_name }}/website/html.tar.gz"

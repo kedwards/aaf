@@ -21,6 +21,14 @@
   ansible.builtin.set_fact:
     key_name: "{{ private_key | basename | split('.') | first }}"
 
+- name: Package and upload website
+  ansible.builtin.command: |
+    tar -czvf html.tar.gz html
+    aws s3 cp html.tar.gz s3://{{ s3_bucket_name }}/website/html.tar.gz
+    rm -r html.tar.gz
+  args:
+    chdir: "{{ root_dir }}"
+
 - name: Create compute stack
   amazon.aws.cloudformation:
     stack_name: "{{ stack_prefix }}-compute"
@@ -47,5 +55,6 @@
       TagName: "{{ lookup('env', 'TAG_NAME') }}"
       TagGroup: "{{ lookup('env', 'TAG_GROUP') }}"
       TagEnv: "{{ lookup('env', 'TAG_ENVIRONMENT') }}"
+      WebServerUrl: "{{ lookup('env', 'WEB_SERVER_URL') }}"
     tags:
       Stack: "{{ stack_prefix }}-compute"

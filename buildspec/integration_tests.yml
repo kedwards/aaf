@@ -9,7 +9,7 @@ phases:
   build:
     commands:
       - cd ansible
-      - ansible-playbook -i inventories/ playbooks/40_integration_tests.yml -e stack_prefix="tester-cf"
+      - ansible-playbook -i inventories/ playbooks/40_integration_tests.yml -e stack_prefix="tetris-cf"
   post_build:
     commands:
-      - ansible-playbook -i inventories/ playbooks/roles/integration_tests/tests/test.yml -e stack_prefix="tester-cf"
+      - ansible-playbook -i inventories/ playbooks/roles/integration_tests/tests/test.yml -e stack_prefix="tetris-cf"

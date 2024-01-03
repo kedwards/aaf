@@ -74,6 +74,10 @@ Parameters:
     Description: '''Environment'' tag value'
     Type: String
 
+  WebServerSource:
+    Description: The location of the webserver source files
+    Type: String
+
 Resources:
   InstanceRole:
     Type: AWS::IAM::Role
@@ -192,8 +196,8 @@ Resources:
         configureWeb:
           commands:
             01_configure:
-              command: |
-                echo "<h1>Ansible AWS And Friends</h1>" > /var/www/html/index.html
+              sources:
+                /var/www/html: !Ref WebServerSource
     Properties:
       MetricsCollection:
         - Granularity: 1Minute
