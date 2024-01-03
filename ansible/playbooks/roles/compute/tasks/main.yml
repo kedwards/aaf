@@ -21,13 +21,23 @@
   ansible.builtin.set_fact:
     key_name: "{{ private_key | basename | split('.') | first }}"
 
-- name: Package and upload website
+- name: Package website
   ansible.builtin.command: |
     tar -czvf html.tar.gz html
-    aws s3 cp html.tar.gz s3://{{ s3_bucket_name }}/website/html.tar.gz
-    rm -r html.tar.gz
   args:
     chdir: "{{ root_dir }}"
+
+
+- name: Sync package to s3 location
+  community.aws.s3_sync:
+    bucket: "{{ s3_bucket_name }}"
+    file_root: "{{ root_dir }}/html.tar.gz"
+    key_prefix: website
+
+# .builtin.command: |
+#     aws s3 mv html.tar.gz s3://{{ s3_bucket_name }}/website/html.tar.gz
+#   args:
+#     chdir: "{{ root_dir }}"
 
 - name: Create compute stack
   amazon.aws.cloudformation:

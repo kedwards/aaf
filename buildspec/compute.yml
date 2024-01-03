@@ -27,4 +27,5 @@ phases:
       - pip install -r requirements.txt -q
   build:
     commands:
+      - codebuild-breakpoint
       - make deploy ENV=wtf PLAY=compute REGION=us-west-2 EVARS="prefix=tetris"

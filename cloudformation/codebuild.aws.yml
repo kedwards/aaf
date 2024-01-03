@@ -6,6 +6,10 @@ Parameters:
     Default: $iam-CodeBuildServiceRoleArn
     Type: String
 
+  PrivateSubnets:
+    Description: The list of Private SubnetIds in your Virtual Private Cloud (VPC)
+    Type: List<AWS::EC2::Subnet::Id>
+
   RepositoryName:
     Description: Name of the repository
     Type: String
@@ -16,6 +20,10 @@ Parameters:
     
   StackPrefix:
     Description: Prefix for stack resources
+    Type: String
+
+  VpcEndpointClientsSecurityGroupId:
+    Description: Security group for the VPC endpoint clients
     Type: String
 
 Conditions:
@@ -156,6 +164,13 @@ Resources:
           - !Join [ "-", [ !Sub "${StackPrefix}", "CodeBuildServiceRole" ] ]
       TimeoutInMinutes: 60
       QueuedTimeoutInMinutes: 480
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref VpcEndpointClientsSecurityGroupId
+        Subnets: !Ref PrivateSubnets
+        VpcId: 
+          Fn::ImportValue:
+            !Sub "${StackPrefix}-network-VpcId"
       EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
       BadgeEnabled: true
       LogsConfig:
@@ -198,6 +213,13 @@ Resources:
               !Join [ "-", [ !Sub "${StackPrefix}", !Select [ 1, !Split [ "$", !Ref CodeBuildServiceRoleArn ] ] ] ]
           - !Join [ "-", [ !Sub "${StackPrefix}", "CodeBuildServiceRole" ] ]
       TimeoutInMinutes: 60
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref VpcEndpointClientsSecurityGroupId
+        Subnets: !Ref PrivateSubnets
+        VpcId: 
+          Fn::ImportValue:
+            !Sub "${StackPrefix}-network-VpcId"
       QueuedTimeoutInMinutes: 480
       EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
       BadgeEnabled: true
@@ -242,6 +264,13 @@ Resources:
           - !Join [ "-", [ !Sub "${StackPrefix}", "CodeBuildServiceRole" ] ]
       TimeoutInMinutes: 60
       QueuedTimeoutInMinutes: 480
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref VpcEndpointClientsSecurityGroupId
+        Subnets: !Ref PrivateSubnets
+        VpcId: 
+          Fn::ImportValue:
+            !Sub "${StackPrefix}-network-VpcId"
       EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
       BadgeEnabled: true
       LogsConfig:

@@ -61,12 +61,9 @@ Resources:
                   - "autoscaling:*"
                   - "elaslasticLoadBalancingV2:*"
                   - "route53:*"
-                Effect: "Allow"
-                Resource: "*"
-              - Action:
                   - "s3:*"
                 Effect: "Allow"
-                Resource: !Sub "arn:aws:s3:::${StackPrefix}-*"
+                Resource: "*"
               - Action:
                   - "s3:PutObject"
                   - "s3:GetObject"
