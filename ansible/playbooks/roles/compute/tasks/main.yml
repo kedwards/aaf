@@ -64,6 +64,5 @@
       TagName: "{{ lookup('env', 'TAG_NAME') }}"
       TagGroup: "{{ lookup('env', 'TAG_GROUP') }}"
       TagEnv: "{{ lookup('env', 'TAG_ENVIRONMENT') }}"
-      WebServerSource: "{{ lookup('env', 'WEB_SERVER_URL') }}"
     tags:
       Stack: "{{ stack_prefix }}-compute"
