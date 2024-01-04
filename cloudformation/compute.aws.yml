@@ -115,41 +115,23 @@ Resources:
       GroupId: !Ref VpcEndpointClientsSecurityGroupId
       ToPort: 443
 
-  AlbSecurityGroup:
+  ComputeSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: ELB Public http(s) Access
+      GroupDescription: Access to the Compute node
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !ImportValue
+            Fn::Sub: "${StackPrefix}-security-AlbSecurityGroupId"
+          Description: Allow All to HTTP
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        - CidrIp: 10.0.0.0/16
+          Description: Allow All to HTTP
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
       VpcId: !Ref VpcId
-
-  AlbHttpSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      CidrIp: 0.0.0.0/0
-      Description: Allow All to HTTP
-      FromPort: 80
-      GroupId: !GetAtt AlbSecurityGroup.GroupId
-      IpProtocol: tcp
-      ToPort: 80
-
-  AlbHttpsSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      CidrIp: 0.0.0.0/0
-      Description: Allow All to HTTPS
-      FromPort: 443
-      GroupId: !GetAtt AlbSecurityGroup.GroupId
-      IpProtocol: tcp
-      ToPort: 443
-
-  AlbSshSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      CidrIp: 0.0.0.0/0
-      Description: Allow All to SSH
-      FromPort: 22
-      GroupId: !GetAtt AlbSecurityGroup.GroupId
-      IpProtocol: tcp
-      ToPort: 22
 
   AutoScalingGroup:
     CreationPolicy:
@@ -275,8 +257,8 @@ Resources:
       Name: !Sub "${StackPrefix}-webserver"
       Scheme: internet-facing
       SecurityGroups:
-        - !GetAtt AlbSecurityGroup.GroupId
-        - !Ref VpcEndpointClientsSecurityGroupId
+        - !ImportValue
+            Fn::Sub: "${StackPrefix}-security-AlbSecurityGroupId"
       Subnets: !Ref PublicSubnets
       Type: application
 
@@ -326,7 +308,7 @@ Resources:
           - DeviceIndex: 0
             AssociatePublicIpAddress: false
             Groups:
-              - !GetAtt AlbSecurityGroup.GroupId
+              - !GetAtt ComputeSecurityGroup.GroupId
               - !Ref VpcEndpointClientsSecurityGroupId
             DeleteOnTermination: true
         UserData: !Base64

@@ -1,7 +1,7 @@
 ---
 - name: Test compute role
   gather_facts: true
-  hosts: "tag_Group_{{ test_hosts }}_webservers"
+  hosts: "tag_Group_{{ test_hosts | default('localhost')  }}_webservers"
 
   pre_tasks:
     - name: List all ansible facts

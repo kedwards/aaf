@@ -1,10 +1,5 @@
 Description: Iam resources
 
-Parameters:
-  StackPrefix:
-    Type: String
-    Description: The prefix of the stack
-
 Resources:
   ApiGatewayRole:
     Type: AWS::IAM::Role
@@ -48,49 +43,19 @@ Resources:
             Statement:
               - Action:
                   - "ec2:*"
-                  - "cloudformation:ListStackResources"
-                  - "cloudformation:CreateChangeSet"
-                  - "CloudFormation:CreateStack"
-                  - "CloudFormation:UpdateStack"
-                  - "cloudformation:DescribeStacks"
-                  - "cloudformation:DescribeStackEvents"
-                  - "cloudformation:ValidateTemplate"
-                  - "ssm:GetParameters"
+                  - "cloudformation:*"
+                  - "ssm:*"
                   - "elasticloadbalancing:*"
                   - "iam:*"
                   - "autoscaling:*"
                   - "elaslasticLoadBalancingV2:*"
                   - "route53:*"
                   - "s3:*"
+                  - "codecommit:*"
+                  - "codebuild:*"
+                  - "logs:*"
                 Effect: "Allow"
                 Resource: "*"
-              - Action:
-                  - "s3:PutObject"
-                  - "s3:GetObject"
-                  - "s3:GetObjectVersion"
-                  - "s3:GetBucketAcl"
-                  - "s3:GetBucketLocation"
-                Effect: "Allow"
-                Resource: !Sub "arn:aws:s3:::codepipeline-${AWS::Region}-*"
-              - Action:
-                  - "codecommit:GitPull"
-                Effect: "Allow"
-                Resource: !Sub "arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:*"
-              - Action:
-                  - "codebuild:CreateReportGroup"
-                  - "codebuild:CreateReport"
-                  - "codebuild:UpdateReport"
-                  - "codebuild:BatchPutTestCases"
-                  - "codebuild:BatchPutCodeCoverages"
-                Effect: "Allow"
-                Resource: !Sub "arn:aws:codebuiuld:${AWS::Region}:${AWS::AccountId}:report-group/*"
-              - Action:
-                  - "logs:CreateLogGroup"
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
-                Effect: "Allow"
-                Resource: 
-                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*"
           PolicyName: CodeBuildBasePolicy
       RoleName: !Sub "${AWS::StackName}-CodeBuildServiceRole"
 
@@ -140,39 +105,10 @@ Resources:
                   - "rds:*"
                   - "ssm:GetParameters"
                   - "sqs:*"
-                Resource: "*"
-              - Action:
                   - "s3:*"
-                Effect: "Allow"
-                Resource: !Sub "arn:aws:s3:::${StackPrefix}-*"
-              - Action:
-                  - "s3:PutObject"
-                  - "s3:GetObject"
-                  - "s3:GetObjectVersion"
-                  - "s3:GetBucketAcl"
-                  - "s3:GetBucketLocation"
-                Effect: "Allow"
-                Resource: !Sub "arn:aws:s3:::codepipeline-${AWS::Region}-*"
-              - Action:
-                  - "codecommit:GitPull"
-                Effect: "Allow"
-                Resource: !Sub "arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:*"
-              - Action:
-                  - "codebuild:CreateReportGroup"
-                  - "codebuild:CreateReport"
-                  - "codebuild:UpdateReport"
-                  - "codebuild:BatchPutTestCases"
-                  - "codebuild:BatchPutCodeCoverages"
-                Effect: "Allow"
-                Resource: !Sub "arn:aws:codebuiuld:${AWS::Region}:${AWS::AccountId}:report-group/*"
-              - Action:
-                  - "logs:CreateLogGroup"
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
-                Effect: "Allow"
-                Resource: 
-                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:codebuild"
-                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:codebuild:*"
+                  - "codebuild:*"
+                  - "logs:*"
+                Resource: "*"
           PolicyName: CodeBuildBasePolicy
       RoleName: !Sub "${AWS::StackName}-CodePipelineServiceRole"
 

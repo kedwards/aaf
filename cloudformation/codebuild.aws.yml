@@ -6,10 +6,6 @@ Parameters:
     Default: $iam-CodeBuildServiceRoleArn
     Type: String
 
-  PrivateSubnets:
-    Description: The list of Private SubnetIds in your Virtual Private Cloud (VPC)
-    Type: List<AWS::EC2::Subnet::Id>
-
   RepositoryName:
     Description: Name of the repository
     Type: String
@@ -20,10 +16,6 @@ Parameters:
     
   StackPrefix:
     Description: Prefix for stack resources
-    Type: String
-
-  VpcEndpointClientsSecurityGroupId:
-    Description: Security group for the VPC endpoint clients
     Type: String
 
 Conditions:
@@ -133,152 +125,10 @@ Resources:
           EncryptionDisabled: false
       Visibility: PRIVATE
 
-  ComputeCodeBuildProject:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      Name: !Sub "${StackPrefix}-cfn-compute"
-      Description: Build EC2 resources for Web Servers using CloudFormation and Ansible
-      Source:
-        BuildSpec: buildspec/compute.yml
-        GitCloneDepth: 1
-        GitSubmodulesConfig:
-          FetchSubmodules: false
-        InsecureSsl: false
-        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
-        Type: CODECOMMIT
-      Artifacts:
-        Type: NO_ARTIFACTS
-      Cache:
-        Type: NO_CACHE
-      Environment:
-        ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
-        ImagePullCredentialsType: CODEBUILD
-        PrivilegedMode: false
-        Type: LINUX_CONTAINER
-      ServiceRole: 
-        !If 
-          - CodeBuildServiceRoleArnIsImported
-          - Fn::ImportValue: 
-              !Join [ "-", [ !Sub "${StackPrefix}", !Select [ 1, !Split [ "$", !Ref CodeBuildServiceRoleArn ] ] ] ]
-          - !Join [ "-", [ !Sub "${StackPrefix}", "CodeBuildServiceRole" ] ]
-      TimeoutInMinutes: 60
-      QueuedTimeoutInMinutes: 480
-      VpcConfig:
-        SecurityGroupIds:
-          - !Ref VpcEndpointClientsSecurityGroupId
-        Subnets: !Ref PrivateSubnets
-        VpcId: 
-          Fn::ImportValue:
-            !Sub "${StackPrefix}-network-VpcId"
-      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
-      BadgeEnabled: true
-      LogsConfig:
-        CloudWatchLogs:
-          Status: ENABLED
-          GroupName: !Ref CodeBuildCloudWatchLogGroup
-          StreamName: cfn-compute
-        S3Logs:
-          Status: DISABLED
-          EncryptionDisabled: false
-      Visibility: PRIVATE
+Outputs:
+  CodeBuildCloudWatchLogGroup:
+    Description: CloudWatch log group for codebuild
+    Value: !Ref CodeBuildCloudWatchLogGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudWatchLogGroup"
 
-  WebConfigCodeBuildProject:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      Name: !Sub "${StackPrefix}-web-config"
-      Description: Configure web servers using ansible
-      Source:
-        BuildSpec: buildspec/web_config.yml
-        GitCloneDepth: 1
-        GitSubmodulesConfig:
-          FetchSubmodules: false
-        InsecureSsl: false
-        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
-        Type: CODECOMMIT
-      Artifacts:
-        Type: NO_ARTIFACTS
-      Cache:
-        Type: NO_CACHE
-      Environment:
-        ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
-        ImagePullCredentialsType: CODEBUILD
-        PrivilegedMode: false
-        Type: LINUX_CONTAINER
-      ServiceRole: 
-        !If 
-          - CodeBuildServiceRoleArnIsImported
-          - Fn::ImportValue: 
-              !Join [ "-", [ !Sub "${StackPrefix}", !Select [ 1, !Split [ "$", !Ref CodeBuildServiceRoleArn ] ] ] ]
-          - !Join [ "-", [ !Sub "${StackPrefix}", "CodeBuildServiceRole" ] ]
-      TimeoutInMinutes: 60
-      VpcConfig:
-        SecurityGroupIds:
-          - !Ref VpcEndpointClientsSecurityGroupId
-        Subnets: !Ref PrivateSubnets
-        VpcId: 
-          Fn::ImportValue:
-            !Sub "${StackPrefix}-network-VpcId"
-      QueuedTimeoutInMinutes: 480
-      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
-      BadgeEnabled: true
-      LogsConfig:
-        CloudWatchLogs:
-          Status: ENABLED
-          GroupName: !Ref CodeBuildCloudWatchLogGroup
-          StreamName: web-config
-        S3Logs:
-          Status: DISABLED
-          EncryptionDisabled: false
-      Visibility: PRIVATE
-
-  TestCodeBuildProject:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      Name: !Sub "${StackPrefix}-ansible-test"
-      Description: Test the final environment and deployed applications
-      Source:
-        BuildSpec: buildspec/integration_tests.yml
-        GitCloneDepth: 1
-        GitSubmodulesConfig:
-          FetchSubmodules: false
-        InsecureSsl: false
-        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${RepositoryName}"
-        Type: CODECOMMIT
-      Artifacts:
-        Type: NO_ARTIFACTS
-      Cache:
-        Type: NO_CACHE
-      Environment:
-        ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
-        ImagePullCredentialsType: CODEBUILD
-        PrivilegedMode: false
-        Type: LINUX_CONTAINER
-      ServiceRole: 
-        !If 
-          - CodeBuildServiceRoleArnIsImported
-          - Fn::ImportValue: 
-              !Join [ "-", [ !Sub "${StackPrefix}", !Select [ 1, !Split [ "$", !Ref CodeBuildServiceRoleArn ] ] ] ]
-          - !Join [ "-", [ !Sub "${StackPrefix}", "CodeBuildServiceRole" ] ]
-      TimeoutInMinutes: 60
-      QueuedTimeoutInMinutes: 480
-      VpcConfig:
-        SecurityGroupIds:
-          - !Ref VpcEndpointClientsSecurityGroupId
-        Subnets: !Ref PrivateSubnets
-        VpcId: 
-          Fn::ImportValue:
-            !Sub "${StackPrefix}-network-VpcId"
-      EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
-      BadgeEnabled: true
-      LogsConfig:
-        CloudWatchLogs:
-          Status: ENABLED
-          GroupName: !Ref CodeBuildCloudWatchLogGroup
-          StreamName: ansible-test
-        S3Logs:
-          Status: DISABLED
-          EncryptionDisabled: false
-      Visibility: PRIVATE

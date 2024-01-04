@@ -1,0 +1,28 @@
+---
+- name: Set stack name
+  ansible.builtin.set_fact:
+    endpoints_stack_name: "{{ stack_prefix }}-endpoints"
+    network_stack_name: "{{ stack_prefix }}-network"
+
+- name: Get facts about network stack
+  amazon.aws.cloudformation_info:
+    stack_name: "{{ item }}"
+  loop:
+    - "{{ network_stack_name }}"
+  register: stack_facts
+
+- name: Set stack facts
+  ansible.builtin.set_fact:
+    network_facts: "{{ stack_facts.results[0].cloudformation[network_stack_name].stack_outputs }}"
+
+- name: Create security stack
+  amazon.aws.cloudformation:
+    stack_name: "{{ stack_prefix }}-security"
+    state: present
+    region: "{{ aws_region }}"
+    disable_rollback: false
+    template: "{{ cf_dir }}/security.aws.yml"
+    template_parameters:
+      VpcId: "{{ network_facts.VpcId }}"
+    tags:
+      Stack: "{{ stack_prefix }}-security"

@@ -1,0 +1,41 @@
+Description: General security resources
+
+Parameters:
+  VpcId:
+    Description: The vpcId to place resources
+    Type: AWS::EC2::VPC::Id
+
+Resources:
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ELB Public http(s) Access
+      VpcId: !Ref VpcId
+
+  AlbHttpSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      CidrIp: 0.0.0.0/0
+      Description: Allow All to HTTP
+      FromPort: 80
+      GroupId: !GetAtt AlbSecurityGroup.GroupId
+      IpProtocol: tcp
+      ToPort: 80
+
+  AlbHttpsSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      CidrIp: 0.0.0.0/0
+      Description: Allow All to HTTPS
+      FromPort: 443
+      GroupId: !GetAtt AlbSecurityGroup.GroupId
+      IpProtocol: tcp
+      ToPort: 443
+
+Outputs:
+  AlbSecurityGroupId:
+    Description: The security group id for alb's
+    Value: !GetAtt AlbSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${AWS::StackName}-AlbSecurityGroupId"
+

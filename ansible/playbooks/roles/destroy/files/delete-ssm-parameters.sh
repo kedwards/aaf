@@ -7,4 +7,4 @@ if [ -z "${prefix}" ] ; then
 	exit 1
 fi
 
-aws ssm delete-parameters --name $(aws ssm describe-parameters --query "Parameters[?contains(Name, '${prefix}')].Name" --output text)
+aws ssm delete-parameters --name $(aws ssm describe-parameters --query "Parameters[?contains(Name, '${prefix}')].Name" --output text) || exit 0

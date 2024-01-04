@@ -1,21 +1,21 @@
 ---
-- name: Set stack name
-  ansible.builtin.set_fact:
-    endpoints_stack_name: "{{ stack_prefix }}-endpoints"
-    network_stack_name: "{{ stack_prefix }}-network"
+# - name: Set stack name
+#   ansible.builtin.set_fact:
+#     endpoints_stack_name: "{{ stack_prefix }}-endpoints"
+#     network_stack_name: "{{ stack_prefix }}-network"
 
-- name: Get facts about network stack
-  amazon.aws.cloudformation_info:
-    stack_name: "{{ item }}"
-  loop:
-    - "{{ network_stack_name }}"
-    - "{{ endpoints_stack_name }}"
-  register: stack_facts
+# - name: Get facts about network stack
+#   amazon.aws.cloudformation_info:
+#     stack_name: "{{ item }}"
+#   loop:
+#     - "{{ network_stack_name }}"
+#     - "{{ endpoints_stack_name }}"
+#   register: stack_facts
 
-- name: Set stack facts
-  ansible.builtin.set_fact:
-    network_facts: "{{ stack_facts.results[0].cloudformation[network_stack_name].stack_outputs }}"
-    endpoints_facts: "{{ stack_facts.results[1].cloudformation[endpoints_stack_name].stack_outputs }}"
+# - name: Set stack facts
+#   ansible.builtin.set_fact:
+#     network_facts: "{{ stack_facts.results[0].cloudformation[network_stack_name].stack_outputs }}"
+#     endpoints_facts: "{{ stack_facts.results[1].cloudformation[endpoints_stack_name].stack_outputs }}"
 
 - name: Create codebuild resources
   amazon.aws.cloudformation:
@@ -25,12 +25,12 @@
     template: "{{ cf_dir }}/codebuild.aws.yml"
     create_changeset: "{{ create_changeset }}"
     template_parameters:
-      PrivateSubnets: "{{ network_facts.PrivateSubnets }}"
+      # PrivateSubnets: "{{ network_facts.PrivateSubnets }}"
       S3BucketName: "{{ s3_bucket_name }}"
       RepositoryName: "{{ repository_name }}"
       # SsmParameterPath: "{{ ssm_parameter_path }}"
       StackPrefix: "{{ stack_prefix }}"
-      VpcEndpointClientsSecurityGroupId: "{{ endpoints_facts.VpcEndpointClientsSecurityGroupId }}"
+      # VpcEndpointClientsSecurityGroupId: "{{ endpoints_facts.VpcEndpointClientsSecurityGroupId }}"
 
 - name: Template buildspec files
   ansible.builtin.template:

@@ -1,6 +1,6 @@
 ---
 - name: Test httpd role
-  hosts: "tag_Group_{{ test_hosts }}_webservers"
+  hosts: "tag_Group_{{ test_hosts | default('localhost') }}_webservers"
   gather_facts: true
   vars:
     hostname: "{{ hostvars[inventory_hostname].name }}"

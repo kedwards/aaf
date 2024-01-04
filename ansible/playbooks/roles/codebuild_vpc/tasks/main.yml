@@ -1,0 +1,31 @@
+---
+- name: Set stack name
+  ansible.builtin.set_fact:
+    endpoints_stack_name: "{{ stack_prefix }}-endpoints"
+    network_stack_name: "{{ stack_prefix }}-network"
+
+- name: Get facts about network stack
+  amazon.aws.cloudformation_info:
+    stack_name: "{{ item }}"
+  loop:
+    - "{{ network_stack_name }}"
+    - "{{ endpoints_stack_name }}"
+  register: stack_facts
+
+- name: Set stack facts
+  ansible.builtin.set_fact:
+    network_facts: "{{ stack_facts.results[0].cloudformation[network_stack_name].stack_outputs }}"
+    endpoints_facts: "{{ stack_facts.results[1].cloudformation[endpoints_stack_name].stack_outputs }}"
+
+- name: Create codebuild resources
+  amazon.aws.cloudformation:
+    stack_name: "{{ stack_prefix }}-codebuild-vpc"
+    state: present
+    region: "{{ aws_region }}"
+    template: "{{ cf_dir }}/codebuild_vpc.aws.yml"
+    create_changeset: "{{ create_changeset }}"
+    template_parameters:
+      PrivateSubnets: "{{ network_facts.PrivateSubnets }}"
+      RepositoryName: "{{ repository_name }}"
+      StackPrefix: "{{ stack_prefix }}"
+      VpcEndpointClientsSecurityGroupId: "{{ endpoints_facts.VpcEndpointClientsSecurityGroupId }}"
