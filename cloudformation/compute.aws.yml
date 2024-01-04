@@ -176,10 +176,8 @@ Resources:
                 systemctl start httpd
                 systemctl enable httpd
         configureWeb:
-          commands:
-            01_configure:
-              sources:
-                /var/www/html: !Ref WebServerSource
+          sources:
+            /var/www/html: !Ref WebServerSource
     Properties:
       MetricsCollection:
         - Granularity: 1Minute
