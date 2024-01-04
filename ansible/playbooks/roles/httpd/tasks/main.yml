@@ -27,6 +27,20 @@
     dest: /var/www/html/index.html
     mode: "0644"
 
+- name: Ensure directory structure exists
+  ansible.builtin.file:
+    path: "/var/www/html/{{ item.path }}"
+    state: directory
+  with_community.general.filetree: "{{ role_path }}/templates"
+  when: item.state == "directory"
+
+- name: Ensure files are populated from templates
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/var/www/html/{{ item.path }}"
+  with_community.general.filetree: "{{ role_path }}/templates"
+  when: item.state == "file"
+
 - name: Ensure apache is running
   ansible.builtin.service:
     name: httpd
