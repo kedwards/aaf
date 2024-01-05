@@ -60,7 +60,7 @@ Resources:
         CloudWatchLogs: 
           Status: "ENABLED"
           GroupName: !Sub "${StackPrefix}-codebuild-logs"
-          StreamName: validate
+          StreamName: validate-templates
         S3Logs: 
           Status: "ENABLED"
           Location: !Sub "${S3BucketName}/build_logs"
@@ -85,8 +85,8 @@ Resources:
   NetworkProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: !Sub "${StackPrefix}-cfn-network"
-      Description: Deploy network
+      Name: !Sub "${StackPrefix}-DeployNetwork"
+      Description: Deploy network resources
       Source:
         BuildSpec: buildspec/network.yml
         GitCloneDepth: 1
@@ -119,7 +119,7 @@ Resources:
         CloudWatchLogs:
           Status: ENABLED
           GroupName: !Ref CodeBuildCloudWatchLogGroup
-          StreamName: cfn-DeployNetwork
+          StreamName: ideploy-network 
         S3Logs:
           Status: DISABLED
           EncryptionDisabled: false
