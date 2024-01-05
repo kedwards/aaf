@@ -19,7 +19,7 @@
       path: /var/www/html/index.html
     - src: "{{ role_path }}/templates/main.js.j2"
       path: /var/www/html/js/main.js
-    - src: "{{ role_path }}/templates/main.css.j2"
+    - src: "{{ role_path }}/templates/style.css.j2"
       path: /var/www/html/css/main.css
     - src: "{{ role_path }}/templates/info.php.j2"
       path: /var/www/html/info.php

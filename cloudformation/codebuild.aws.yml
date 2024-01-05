@@ -65,7 +65,7 @@ Resources:
           Status: "ENABLED"
           Location: !Sub "${S3BucketName}/build_logs"
           EncryptionDisabled: false
-      Name: !Sub "${StackPrefix}-cfn-validate"
+      Name: !Sub "${StackPrefix}-ValidateTemplates"
       TimeoutInMinutes: 10
       QueuedTimeoutInMinutes: 5
       ServiceRole: 
@@ -119,7 +119,7 @@ Resources:
         CloudWatchLogs:
           Status: ENABLED
           GroupName: !Ref CodeBuildCloudWatchLogGroup
-          StreamName: cfn-network
+          StreamName: cfn-DeployNetwork
         S3Logs:
           Status: DISABLED
           EncryptionDisabled: false
