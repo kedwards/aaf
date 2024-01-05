@@ -9,6 +9,26 @@
       - httpd-tools
       - php
 
+- name: Deploy apache config file
+  ansible.builtin.template:
+    src: files/server-status.conf
+    dest: /etc/httpd/conf.d/server-status.conf
+    mode: "0644"
+
+- name: Deploy php document to DocumentRoot
+  ansible.builtin.template:
+    src: files/info.php
+    dest: /var/www/html/info.php
+    mode: "0644"
+
+- name: Ensure directory structure exists
+  ansible.builtin.file:
+    path: "/var/www/html/{{ item }}"
+    state: directory
+  loop:
+    - css
+    - js
+
 - name: Ensure web files are populated from templates
   ansible.builtin.template:
     src: "{{ item.src }}"
