@@ -33,7 +33,7 @@ Resources:
   ComputeCodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: !Sub "${StackPrefix}-cfn-compute"
+      Name: !Sub "${StackPrefix}-DeployCompute"
       Description: Build EC2 resources for Web Servers using CloudFormation and Ansible
       Source:
         BuildSpec: buildspec/compute.yml
@@ -84,7 +84,7 @@ Resources:
   WebConfigCodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: !Sub "${StackPrefix}-web-config"
+      Name: !Sub "${StackPrefix}-ConfigureWeb"
       Description: Configure web servers using ansible
       Source:
         BuildSpec: buildspec/web_config.yml
@@ -135,7 +135,7 @@ Resources:
   TestCodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: !Sub "${StackPrefix}-ansible-test"
+      Name: !Sub "${StackPrefix}-Test"
       Description: Test the final environment and deployed applications
       Source:
         BuildSpec: buildspec/integration_tests.yml
