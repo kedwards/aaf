@@ -27,7 +27,7 @@
         url: http://{{ inventory_hostname }}
         return_content: true
       register: response
-      failed_when: "'{{ httpd_title }}' not in response.content"
+      failed_when: httpd_title not in response.content
 
     - name: Check if server-status contains 'Apache Server Status' string
       ansible.builtin.uri:

@@ -20,12 +20,12 @@
       retries: 2
       delay: 5
 
-    - name: Check if homepage contains 'Ansible and Friend on AWS!' string
+    - name: Check if homepage contains test string
       ansible.builtin.uri:
         url: "{{ public_url }}"
         return_content: true
       register: response
-      failed_when: "'Ansible and Friend on AWS!' not in response.content"
+      failed_when: httpd_title not in response.content
 
     - name: Check if /server-status page contains 'Apache Server Status' string
       ansible.builtin.uri:
