@@ -2,16 +2,16 @@ version: 0.2
 
 env:
   variables:
-    TEMPLATE_URL: "https://gameboy-cf-aaf-wtf-us-west-2.s3.us-west-2.amazonaws.com/artifacts/network.aws.yml"
-    ENDPOINTS_TEMPLATE_URL: "https://gameboy-cf-aaf-wtf-us-west-2.s3.us-west-2.amazonaws.com/artifacts/endpoints.aws.yml"
+    TEMPLATE_URL: "https://wanna-cf-aaf-wtf-us-west-2.s3.us-west-2.amazonaws.com/artifacts/network.aws.yml"
+    ENDPOINTS_TEMPLATE_URL: "https://wanna-cf-aaf-wtf-us-west-2.s3.us-west-2.amazonaws.com/artifacts/endpoints.aws.yml"
     AWS_REGION: "us-west-2"
     TAG_ENVIRONMENT: "aaf"
   parameter-store:
-    VPC_CIDR: "/gameboy-cf/aaf/vpc_cidr"
-    PUBLIC_SUBNET_1_CIDR: "/gameboy-cf/aaf/public_subnet_1_cidr"
-    PUBLIC_SUBNET_2_CIDR: "/gameboy-cf/aaf/public_subnet_2_cidr"
-    PRIVATE_SUBNET_1_CIDR: "/gameboy-cf/aaf/private_subnet_1_cidr"
-    PRIVATE_SUBNET_2_CIDR: "/gameboy-cf/aaf/private_subnet_2_cidr"
+    VPC_CIDR: "/wanna-cf/aaf/vpc_cidr"
+    PUBLIC_SUBNET_1_CIDR: "/wanna-cf/aaf/public_subnet_1_cidr"
+    PUBLIC_SUBNET_2_CIDR: "/wanna-cf/aaf/public_subnet_2_cidr"
+    PRIVATE_SUBNET_1_CIDR: "/wanna-cf/aaf/private_subnet_1_cidr"
+    PRIVATE_SUBNET_2_CIDR: "/wanna-cf/aaf/private_subnet_2_cidr"
 
 phases:
   install:
@@ -21,8 +21,8 @@ phases:
       - pip install -r requirements.txt -q
   build:
     commands:
-      - make deploy ENV=wtf PLAY=network REGION=us-west-2 EVARS="prefix=gameboy"
+      - make deploy ENV=wtf PLAY=network REGION=us-west-2 EVARS="prefix=wanna"
   post_build:
     commands:
       - cd ansible
-      - ansible-playbook playbooks/roles/network/tests/test.yml -e stack_prefix=gameboy-cf
+      - ansible-playbook playbooks/roles/network/tests/test.yml -e stack_prefix=wanna-cf

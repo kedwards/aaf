@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   parameter-store:
-    ANSIBLE_PRIVATE_KEY: "/gameboy-cf/aaf/ansible_private_key"
+    ANSIBLE_PRIVATE_KEY: "/wanna-cf/aaf/ansible_private_key"
 
 phases:
   install:
@@ -21,11 +21,11 @@ phases:
       - cd ansible
       - ansible-inventory -i inventory/ --graph
       - codebuild-breakpoint
-      - ansible-playbook -i inventory/ playbooks/roles/compute/tests/test.yml -e test_hosts="gameboy_cf"
+      - ansible-playbook -i inventory/ playbooks/roles/compute/tests/test.yml -e test_hosts="wanna_cf"
   build:
     commands:
-      - ansible-playbook -i inventory/ playbooks/30_web_config.yml -e hosts="gameboy_cf"
+      - ansible-playbook -i inventory/ playbooks/30_web_config.yml -e hosts="wanna_cf"
   post_build:
     commands:
-      - ansible-playbook -i inventory/ playbooks/roles/httpd/tests/test.yml -e test_hosts="gameboy_cf"
+      - ansible-playbook -i inventory/ playbooks/roles/httpd/tests/test.yml -e test_hosts="wanna_cf"
 

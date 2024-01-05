@@ -10,7 +10,7 @@
     - lambda-user
     - compute
     - codepipeline
-    - codebuild
+    - codebuild-vpc
     - codecommit
   register: stacks_async_list
   changed_when: false
@@ -40,10 +40,11 @@
     stack_name: "{{ stack_prefix }}-{{ item }}"
     state: absent
   loop:
-    - iam
+    - codebuild
     - keys
     - endpoints
     - network
+    - security
   register: stacks_async_list
   changed_when: false
 
@@ -55,6 +56,34 @@
   ansible.builtin.set_fact:
     task_async_list: "{{  task_async_list + stacks_async_list.results  }}"
 
+- name: Async check
+  ansible.builtin.async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  retries: 720
+  loop: "{{ task_async_list }}"
+  when: item.ansible_job_id is defined
+
+- name: Delete Stacks
+  async: 1440
+  poll: 0
+  amazon.aws.cloudformation:
+    region: "{{ aws_region }}"
+    stack_name: "{{ stack_prefix }}-{{ item }}"
+    state: absent
+  loop:
+    - iam
+  register: stacks_async_list
+  changed_when: false
+
+- name: Setup variable for async tasks empty
+  ansible.builtin.set_fact:
+    task_async_list: []
+
+- name: Setup async task list
+  ansible.builtin.set_fact:
+    task_async_list: "{{  task_async_list + stacks_async_list.results  }}"
 - name: Async check
   ansible.builtin.async_status:
     jid: "{{ item.ansible_job_id }}"
