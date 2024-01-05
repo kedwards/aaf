@@ -41,10 +41,6 @@
       path: /var/www/html/js/main.js
     - src: "{{ role_path }}/templates/style.css.j2"
       path: /var/www/html/css/main.css
-    - src: "{{ role_path }}/templates/info.php.j2"
-      path: /var/www/html/info.php
-    - src: "{{ role_path }}/templates/server-status.conf.j2"
-      path: /etc/httpd/conf.d/server-status.conf 
 
 - name: Ensure apache is running
   ansible.builtin.service:
