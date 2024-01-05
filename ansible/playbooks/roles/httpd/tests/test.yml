@@ -22,12 +22,12 @@
       retries: 2
       delay: 10
 
-    - name: Check if homepage contains 'Ansible and Friend on AWS!' string
+    - name: Check if homepage contains test string
       ansible.builtin.uri:
         url: http://{{ inventory_hostname }}
         return_content: true
       register: response
-      failed_when: "'Ansible and Friend on AWS!' not in response.content"
+      failed_when: "'{{ httpd_title }}' not in response.content"
 
     - name: Check if server-status contains 'Apache Server Status' string
       ansible.builtin.uri:

@@ -9,37 +9,22 @@
       - httpd-tools
       - php
 
-- name: Deploy apache config file
-  ansible.builtin.template:
-    src: files/server-status.conf
-    dest: /etc/httpd/conf.d/server-status.conf
-    mode: "0644"
-
-- name: Deploy php document to DocumentRoot
-  ansible.builtin.template:
-    src: files/info.php
-    dest: /var/www/html/info.php
-    mode: "0644"
-
-- name: Deploy html document to DocumentRoot
-  ansible.builtin.template:
-    src: templates/index.html.j2
-    dest: /var/www/html/index.html
-    mode: "0644"
-
-- name: Ensure directory structure exists
-  ansible.builtin.file:
-    path: "/var/www/html/{{ item.path }}"
-    state: directory
-  with_community.general.filetree: "{{ role_path }}/templates"
-  when: item.state == "directory"
-
-- name: Ensure files are populated from templates
+- name: Ensure web files are populated from templates
   ansible.builtin.template:
     src: "{{ item.src }}"
-    dest: "/var/www/html/{{ item.path }}"
-  with_community.general.filetree: "{{ role_path }}/templates"
-  when: item.state == "file"
+    dest: "{{ item.path }}"
+    mode: "0644"
+  loop:
+    - src: "{{ role_path }}/templates/index.html.j2"
+      path: /var/www/html/index.html
+    - src: "{{ role_path }}/templates/main.js.j2"
+      path: /var/www/html/js/main.js
+    - src: "{{ role_path }}/templates/main.css.j2"
+      path: /var/www/html/css/main.css
+    - src: "{{ role_path }}/templates/info.php.j2"
+      path: /var/www/html/info.php
+    - src: "{{ role_path }}/templates/server-status.conf.j2"
+      path: /etc/httpd/conf.d/server-status.conf 
 
 - name: Ensure apache is running
   ansible.builtin.service:
