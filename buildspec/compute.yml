@@ -28,4 +28,4 @@ phases:
   build:
     commands:
       - codebuild-breakpoint
-      - make deploy ENV=wtf PLAY=compute REGION=us-west-2 EVARS="prefix=qp-wizzard"
+      - make deploy ENV=wtf PLAY=compute REGION=us-west-2 PREFIX=qp-wizzard

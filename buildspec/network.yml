@@ -21,7 +21,7 @@ phases:
       - pip install -r requirements.txt -q
   build:
     commands:
-      - make deploy ENV=wtf PLAY=network REGION=us-west-2 EVARS="prefix=qp-wizzard"
+      - make deploy ENV=wtf PLAY=network REGION=us-west-2 PREFIX=qp-wizzard
   post_build:
     commands:
       - cd ansible

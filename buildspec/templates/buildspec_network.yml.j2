@@ -21,7 +21,7 @@ phases:
       - pip install -r requirements.txt -q
   build:
     commands:
-      - make deploy ENV={{ aws_profile }} PLAY=network REGION={{ aws_region }} EVARS="prefix={{ prefix }}"
+      - make deploy ENV={{ aws_profile }} PLAY=network REGION={{ aws_region }} PREFIX={{ prefix }}
   post_build:
     commands:
       - cd ansible

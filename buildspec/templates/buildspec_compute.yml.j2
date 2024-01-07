@@ -28,4 +28,4 @@ phases:
   build:
     commands:
       - codebuild-breakpoint
-      - make deploy ENV={{ aws_profile }} PLAY=compute REGION={{ aws_region }} EVARS="prefix={{ prefix }}"
+      - make deploy ENV={{ aws_profile }} PLAY=compute REGION={{ aws_region }} PREFIX={{ prefix }}
