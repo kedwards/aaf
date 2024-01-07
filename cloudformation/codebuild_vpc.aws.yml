@@ -6,9 +6,9 @@ Parameters:
     Default: $iam-CodeBuildServiceRoleArn
     Type: String
 
-    DefaultSecurityGroupId:
-      Description: Security group for the default VPC
-      Type: String
+  DefaultSecurityGroupId:
+    Description: Security group for the default VPC
+    Type: String
 
   PrivateSubnets:
     Description: The list of Private SubnetIds in your Virtual Private Cloud (VPC)
