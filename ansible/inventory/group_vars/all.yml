@@ -47,3 +47,4 @@ tag_name: "{{ stack_prefix }}_compute"
 volume_size: 150
 
 httpd_title: AAF
+httpd_string: AWS, Ansible And Friends
