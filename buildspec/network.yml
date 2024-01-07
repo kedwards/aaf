@@ -2,16 +2,16 @@ version: 0.2
 
 env:
   variables:
-    TEMPLATE_URL: "https://brent-cf-aaf-wtf-us-west-2.s3.us-west-2.amazonaws.com/artifacts/network.aws.yml"
-    ENDPOINTS_TEMPLATE_URL: "https://brent-cf-aaf-wtf-us-west-2.s3.us-west-2.amazonaws.com/artifacts/endpoints.aws.yml"
+    TEMPLATE_URL: "https://qp-wizzard-cf-aaf-wtf-us-west-2.s3.us-west-2.amazonaws.com/artifacts/network.aws.yml"
+    ENDPOINTS_TEMPLATE_URL: "https://qp-wizzard-cf-aaf-wtf-us-west-2.s3.us-west-2.amazonaws.com/artifacts/endpoints.aws.yml"
     AWS_REGION: "us-west-2"
     TAG_ENVIRONMENT: "aaf"
   parameter-store:
-    VPC_CIDR: "/brent-cf/aaf/vpc_cidr"
-    PUBLIC_SUBNET_1_CIDR: "/brent-cf/aaf/public_subnet_1_cidr"
-    PUBLIC_SUBNET_2_CIDR: "/brent-cf/aaf/public_subnet_2_cidr"
-    PRIVATE_SUBNET_1_CIDR: "/brent-cf/aaf/private_subnet_1_cidr"
-    PRIVATE_SUBNET_2_CIDR: "/brent-cf/aaf/private_subnet_2_cidr"
+    VPC_CIDR: "/qp-wizzard-cf/aaf/vpc_cidr"
+    PUBLIC_SUBNET_1_CIDR: "/qp-wizzard-cf/aaf/public_subnet_1_cidr"
+    PUBLIC_SUBNET_2_CIDR: "/qp-wizzard-cf/aaf/public_subnet_2_cidr"
+    PRIVATE_SUBNET_1_CIDR: "/qp-wizzard-cf/aaf/private_subnet_1_cidr"
+    PRIVATE_SUBNET_2_CIDR: "/qp-wizzard-cf/aaf/private_subnet_2_cidr"
 
 phases:
   install:
@@ -21,8 +21,8 @@ phases:
       - pip install -r requirements.txt -q
   build:
     commands:
-      - make deploy ENV=wtf PLAY=network REGION=us-west-2 EVARS="prefix=brent"
+      - make deploy ENV=wtf PLAY=network REGION=us-west-2 EVARS="prefix=qp-wizzard"
   post_build:
     commands:
       - cd ansible
-      - ansible-playbook playbooks/roles/network/tests/test.yml -e stack_prefix=brent-cf
+      - ansible-playbook playbooks/roles/network/tests/test.yml -e stack_prefix=qp-wizzard-cf

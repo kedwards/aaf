@@ -108,8 +108,14 @@ The available plays
 - lambda
 
 
+```bash
+make deploy PLAY=<play> ENV=<env> REGION=<region> [ EXVARS=<extra_vars> ]
+```
+
 #### Running Plays
 
+**setup**
+
 ```bash
-make deploy PLAY=<play> ENV=<env> REGION=<region> EXVARS=<extra_vars>
+make deploy PLAY=setup PREFIX=qp-wizzard ENV=wtf REGION=us-west-2
 ```

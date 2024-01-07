@@ -130,7 +130,7 @@ Outputs:
   ApiGatewayRestApiId:
     Description: The ID of the API Gateway
     Value: !Ref ApiGatewayRestApi
-        Export:
+    Export:
       Name: !Join ["-", [{Ref: "AWS::StackName"}, "ApiGatewayRestApiId"]]
 
   ApiGatewayRestApiRootResourceId:
