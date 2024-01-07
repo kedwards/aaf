@@ -1,7 +1,7 @@
 ---
 - name: Find all lambda folders
   ansible.builtin.find:
-    paths: "{{ root_dir }}/lambdas"
+    paths: "{{ root_dir }}/lambda"
     recurse: false
     file_type: directory
   register: lambda_functions
@@ -9,6 +9,7 @@
 - name: Set function names
   ansible.builtin.set_fact:
     lambdas: "{{ lambda_functions.files | map(attribute='path') | map('basename') | list }}"
+  when: not lambdas is defined
 
 - name: Build lambda resources
   ansible.builtin.shell: |
@@ -18,6 +19,6 @@
     aws cloudformation deploy --template-file {{ item }}.aws.yml --stack-name qp-cf-{{ item }} --region {{ aws_region }}
     rm -r build {{ item }}.aws.yml
   args:
-    chdir: "{{ root_dir }}/lambdas/{{ item }}"
+    chdir: "{{ root_dir }}/lambda/{{ item }}"
   loop: "{{ lambdas }}"
   changed_when: false

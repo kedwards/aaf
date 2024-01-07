@@ -25,6 +25,7 @@
   ansible.builtin.file:
     path: "/var/www/html/{{ item }}"
     state: directory
+    mode: "0775"
   loop:
     - css
     - js

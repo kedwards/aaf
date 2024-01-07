@@ -125,3 +125,32 @@ Resources:
       KeyId: !Ref ApiKey
       KeyType: API_KEY
       UsagePlanId: !Ref ApiUsagePlan
+
+Outputs:
+  ApiGatewayRestApiId:
+    Description: The ID of the API Gateway
+    Value: !Ref ApiGatewayRestApi
+        Export:
+      Name: !Join ["-", [{Ref: "AWS::StackName"}, "ApiGatewayRestApiId"]]
+
+  ApiGatewayRestApiRootResourceId:
+    Description: The root resource ID of the API Gateway
+    Value: !GetAtt ApiGatewayRestApi.RootResourceId
+    Export:
+      Name: !Join ["-", [{Ref: "AWS::StackName"}, "ApiGatewayRestApiRootResourceId"]]
+
+  ApiGatewayRestApiRootResourceUrl:
+    Description: The root resource URL of the API Gateway
+    Value: !Sub 'https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiStageName}/'
+    Export:
+      Name: !Join ["-", [{Ref: "AWS::StackName"}, "ApiGatewayRestApiRootResourceUrl"]]
+
+  ApiGatewayRestApiUrl:
+    Description: The URL of the API Gateway
+    Value: !Sub 'https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiStageName}/${ApiResourcePath}/'
+    Export:
+      Name: !Join ["-", [{Ref: "AWS::StackName"}, "ApiGatewayRestApiUrl"]]
+
+  ApiGatewayRestApiUrlWithKey:
+    Description: The URL of the API Gateway with key
+    Value: !Sub 'https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiStageName}/${ApiResourcePath}/?apikey=${ApiKey}'

@@ -13,7 +13,7 @@
     stack_name: "{{ stack_prefix }}-keys"
     state: present
     region: "{{ aws_region }}"
-    template: "{{ cf_dir }}/ec2_keypair.aws.yml"
+    template: "{{ cf_dir }}/ec2-keypair.aws.yml"
     create_changeset: "{{ create_changeset }}"
     template_parameters:
       KeyName: "{{ key_name }}"

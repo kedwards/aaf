@@ -37,12 +37,19 @@ guard-%:
 		exit 1; \
 	fi
 
-deploy: guard-ENV guard-REGION guard-PLAY  ## Deploy, make deploy ENV=<env> PLAY=<setup|infra> REGION=<region|[us-east-1]> [ EVARS='<key=value> ...' ] [ TAG=<tag> ]
+deploy: guard-ENV guard-REGION guard-PLAY guard-PREFIX  ## Deploy, make deploy ENV=<env> PLAY=<setup|infra> REGION=<region|[us-east-1]> [ EVARS='<key=value> ...' ] [ TAG=<tag> ]
 	@cd $(root_path)/ansible && \
   ANSIBLE_PYTHON_INTERPRETER=$(shell which python) ansible-playbook $(verbosity) \
 		--inventory=inventory/ \
-		--extra-vars="aws_profile=$(ENV) aws_region=$(REGION) branch_name=$(branch_name) $(EVARS)" \
+		--extra-vars="aws_profile=$(ENV) aws_region=$(REGION) branch_name=$(branch_name) prefix=$(PREFIX) $(EVARS)" \
 		$(PLAY).yml $(tags)
+
+lambda: guard-ENV guard-REGION guard-PREFIX  ## lambda, make lambda ENV=<env> REGION=<region|[us-east-1]> [ EVARS='<key=value> ...' ] [ TAG=<tag> ]
+	@cd $(root_path)/ansible && \
+  ANSIBLE_PYTHON_INTERPRETER=$(shell which python) ansible-playbook $(verbosity) \
+		--inventory=inventory/ \
+		--extra-vars="aws_profile=$(ENV) aws_region=$(REGION) branch_name=$(branch_name) prefix=$(PREFIX) $(EVARS)" \
+		playbooks/50_lambda.yml $(tags)
 
 lint: lint-ansible lint-cfn  ## Lint all projects
 
@@ -60,9 +67,9 @@ destroy: guard-ENV guard-REGION  ## Destory resources, make destroy ENV=<env> RE
 		--extra-vars="aws_profile=$(ENV) aws_region=$(REGION) branch_name=$(branch_name) $(EVARS)" \
 		playbooks/XX_destroy.yml $(tags)
 
-template: guard-ENV guard-REGION  ## Template files, make template ENV=<env> REGION=<region|[us-east-1]>
+template: guard-ENV guard-REGION guard-PREFIX ## Template files, make template ENV=<env> REGION=<region|[us-east-1]>
 	@cd $(root_path)/ansible && \
 		ANSIBLE_PYTHON_INTERPRETER=$(shell which python) ansible-playbook $(verbosity) \
     --inventory=inventory/ \
-    --extra-vars="aws_profile=$(ENV) aws_region=$(REGION) branch_name=$(branch_name) $(EVARS)" \
+    --extra-vars="aws_profile=$(ENV) aws_region=$(REGION) branch_name=$(branch_name) prefix=$(PREFIX) $(EVARS)" \
     playbooks/XX_template.yml $(tags)
